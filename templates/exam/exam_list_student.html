@@ -1,0 +1,378 @@
+{% extends 'base.html' %}
+{% load exam_tags %}
+
+{% block title %}可参加的考试 - 智能学习系统{% endblock %}
+
+{% block header_nav %}
+<nav class="header-nav">
+    <a href="{% url 'accounts:home' %}" class="nav-link">
+        <i class="ri-home-4-line"></i> 首页
+    </a>
+    <a href="{% url 'exam:exam_list_student' %}" class="nav-link active">
+        <i class="ri-edit-circle-line"></i> 考试
+    </a>
+    <a href="{% url 'exam:practice_home' %}" class="nav-link">
+        <i class="ri-book-open-line"></i> 练习
+    </a>
+    <a href="{% url 'exam:my_wrongs' %}" class="nav-link">
+        <i class="ri-file-warning-line"></i> 错题
+    </a>
+    <a href="{% url 'exam:my_favorites' %}" class="nav-link">
+        <i class="ri-star-line"></i> 收藏
+    </a>
+</nav>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .exam-list {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+    
+    .exam-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 28px;
+        transition: all 0.3s;
+    }
+    
+    .exam-card:hover {
+        border-color: var(--border-hover);
+        box-shadow: var(--shadow-glow);
+    }
+    
+    .exam-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 16px;
+    }
+    
+    .exam-title {
+        font-size: 20px;
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+    
+    .exam-status {
+        flex-shrink: 0;
+    }
+    
+    .exam-desc {
+        color: var(--text-muted);
+        font-size: 14px;
+        line-height: 1.6;
+        margin-bottom: 16px;
+    }
+    
+    .exam-info {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 16px;
+        margin-bottom: 20px;
+        padding: 16px;
+        background: rgba(255, 255, 255, 0.02);
+        border-radius: 12px;
+    }
+    
+    .info-item {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+    
+    .info-label {
+        color: var(--text-muted);
+        font-size: 12px;
+    }
+    
+    .info-value {
+        color: var(--text-primary);
+        font-size: 14px;
+        font-weight: 500;
+    }
+    
+    .exam-actions {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+    
+    .attempt-info {
+        color: var(--text-muted);
+        font-size: 13px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .score-badge {
+        background: rgba(56, 239, 213, 0.15);
+        color: var(--accent-primary);
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-weight: 600;
+    }
+    
+    .tag-waiting { background: rgba(251, 191, 36, 0.15); color: var(--accent-yellow); }
+    .tag-ended { background: rgba(148, 163, 184, 0.15); color: #94a3b8; }
+    .tag-completed { background: rgba(34, 197, 94, 0.15); color: var(--accent-green); }
+    
+    /* 弹窗样式 */
+    .modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.7);
+        backdrop-filter: blur(4px);
+    }
+    
+    .modal-content {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-color);
+        margin: 12% auto;
+        padding: 32px;
+        border-radius: 20px;
+        width: 90%;
+        max-width: 440px;
+        animation: modalIn 0.3s ease-out;
+    }
+    
+    @keyframes modalIn {
+        from { transform: translateY(-30px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+    }
+    
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 24px;
+    }
+    
+    .modal-title {
+        font-size: 20px;
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+    
+    .modal-close {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.05);
+        border: none;
+        color: var(--text-muted);
+        font-size: 20px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+    }
+    
+    .modal-close:hover {
+        background: rgba(255, 255, 255, 0.1);
+        color: var(--text-primary);
+    }
+    
+    .modal-body {
+        text-align: center;
+        margin-bottom: 28px;
+    }
+    
+    .modal-icon {
+        width: 72px;
+        height: 72px;
+        margin: 0 auto 20px;
+        background: rgba(251, 191, 36, 0.15);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 36px;
+        color: var(--accent-yellow);
+    }
+    
+    .modal-message {
+        color: var(--text-secondary);
+        line-height: 1.7;
+    }
+    
+    .modal-message strong {
+        color: var(--text-primary);
+        display: block;
+        font-size: 18px;
+        margin-bottom: 12px;
+    }
+    
+    .modal-footer {
+        display: flex;
+        justify-content: center;
+        gap: 12px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">
+        <i class="ri-edit-circle-line"></i>
+        可参加的考试
+    </h1>
+    <p class="page-subtitle">查看所有可参加的考试，开始您的测验</p>
+    <div class="page-actions">
+        <a href="{% url 'exam:my_scores' %}" class="btn btn-secondary">
+            <i class="ri-bar-chart-line"></i> 我的成绩
+        </a>
+    </div>
+</div>
+
+<div class="exam-list">
+    {% if exams %}
+        {% for exam in exams %}
+        <div class="exam-card">
+            <div class="exam-header">
+                <div class="exam-title">{{ exam.title }}</div>
+                <div class="exam-status">
+                    {% if now < exam.start_time %}
+                    <span class="tag tag-waiting">未开始</span>
+                    {% elif now > exam.end_time %}
+                    <span class="tag tag-ended">已结束</span>
+                    {% endif %}
+                </div>
+            </div>
+            
+            {% if exam.description %}
+            <div class="exam-desc">{{ exam.description|truncatewords:40 }}</div>
+            {% endif %}
+            
+            <div class="exam-info">
+                <div class="info-item">
+                    <span class="info-label">开始时间</span>
+                    <span class="info-value">{{ exam.start_time|date:"m-d H:i" }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">结束时间</span>
+                    <span class="info-value">{{ exam.end_time|date:"m-d H:i" }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">考试时长</span>
+                    <span class="info-value">{{ exam.duration }} 分钟</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">总分 / 及格分</span>
+                    <span class="info-value">{{ exam.total_score }} / {{ exam.pass_score }} 分</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">最大尝试次数</span>
+                    <span class="info-value">{{ exam.max_attempts }} 次</span>
+                </div>
+            </div>
+            
+            <div class="exam-actions">
+                {% with attempt_info=exam_attempts_info|get_item:exam.id %}
+                {% if attempt_info and attempt_info.attempts_count > 0 %}
+                    <div class="attempt-info">
+                        <span class="tag tag-completed">已参加 {{ attempt_info.attempts_count }}/{{ exam.max_attempts }}</span>
+                        {% if attempt_info.max_score %}
+                        <span class="score-badge">最高 {{ attempt_info.max_score }}分</span>
+                        {% endif %}
+                    </div>
+                    {% if attempt_info.can_attempt and exam_availability|get_item:exam.id %}
+                    <a href="{% url 'exam:start_exam' exam.id %}" class="btn btn-primary">
+                        <i class="ri-restart-line"></i> 再次考试
+                    </a>
+                    {% else %}
+                    <button onclick="showAttemptedModal({{ exam.id }}, '{{ exam.title }}', {{ attempt_info.attempts_count }}, {{ exam.max_attempts }})" class="btn btn-secondary">
+                        <i class="ri-eye-line"></i> 查看成绩
+                    </button>
+                    {% endif %}
+                {% elif exam_availability|get_item:exam.id %}
+                <a href="{% url 'exam:start_exam' exam.id %}" class="btn btn-primary">
+                    <i class="ri-play-line"></i> 开始考试
+                </a>
+                {% else %}
+                    {% if now < exam.start_time %}
+                    <span class="tag tag-waiting">考试尚未开始</span>
+                    {% elif now > exam.end_time %}
+                    <span class="tag tag-ended">考试已结束</span>
+                    {% else %}
+                    <span class="tag tag-warning">暂不可用</span>
+                    {% endif %}
+                {% endif %}
+                {% endwith %}
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="empty-state">
+            <i class="ri-calendar-line"></i>
+            <p>当前没有可参加的考试</p>
+        </div>
+    {% endif %}
+</div>
+
+<!-- 已参加考试弹窗 -->
+<div id="attemptedModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 class="modal-title">提示</h3>
+            <button class="modal-close" onclick="closeAttemptedModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="modal-icon"><i class="ri-information-line"></i></div>
+            <div class="modal-message" id="modalMessage"></div>
+        </div>
+        <div class="modal-footer">
+            <a href="{% url 'exam:my_scores' %}" class="btn btn-secondary">查看成绩</a>
+            <button onclick="closeAttemptedModal()" class="btn btn-primary">确定</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function showAttemptedModal(examId, examTitle, attemptsCount, maxAttempts) {
+        const message = document.getElementById('modalMessage');
+        if (attemptsCount >= maxAttempts) {
+            message.innerHTML = `
+                <strong>您已完成本次考试</strong>
+                <p>考试名称：${examTitle}</p>
+                <p>已完成次数：${attemptsCount}/${maxAttempts}次</p>
+                <p style="margin-top: 12px;">您可以在"我的成绩"页面查看所有考试结果</p>
+            `;
+        } else {
+            message.innerHTML = `
+                <strong>您已参加过本次考试</strong>
+                <p>考试名称：${examTitle}</p>
+                <p style="margin-top: 12px;">您可以在"我的成绩"页面查看考试结果</p>
+            `;
+        }
+        document.getElementById('attemptedModal').style.display = 'block';
+    }
+    
+    function closeAttemptedModal() {
+        document.getElementById('attemptedModal').style.display = 'none';
+    }
+    
+    window.onclick = function(event) {
+        const modal = document.getElementById('attemptedModal');
+        if (event.target == modal) closeAttemptedModal();
+    }
+    
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') closeAttemptedModal();
+    });
+</script>
+{% endblock %}

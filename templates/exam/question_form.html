@@ -1,0 +1,477 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if action == 'create' %}添加题目{% else %}编辑题目{% endif %} - 智能学习系统{% endblock %}
+
+{% block header_nav %}
+<nav class="header-nav">
+    <a href="{% url 'exam:admin_dashboard' %}" class="nav-link">
+        <i class="ri-dashboard-3-line"></i> 控制台
+    </a>
+    <a href="{% url 'exam:exam_list' %}" class="nav-link">
+        <i class="ri-calendar-check-line"></i> 考试管理
+    </a>
+    <a href="{% url 'exam:question_list' %}" class="nav-link active">
+        <i class="ri-file-list-3-line"></i> 题库管理
+    </a>
+</nav>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-container {
+        display: grid;
+        grid-template-columns: 1fr 320px;
+        gap: 24px;
+        align-items: start;
+    }
+    
+    @media (max-width: 1000px) {
+        .form-container {
+            grid-template-columns: 1fr;
+        }
+    }
+    
+    .form-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 32px;
+    }
+    
+    .preview-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 24px;
+        position: sticky;
+        top: 100px;
+    }
+    
+    .preview-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--accent-primary);
+        margin-bottom: 16px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .preview-content {
+        color: var(--text-secondary);
+        line-height: 1.7;
+        font-size: 14px;
+    }
+    
+    .preview-image {
+        margin-top: 12px;
+    }
+    
+    .preview-image img {
+        max-width: 100%;
+        border-radius: 10px;
+        border: 1px solid var(--border-color);
+    }
+    
+    .form-section {
+        margin-bottom: 28px;
+    }
+    
+    .form-section-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--accent-primary);
+        margin-bottom: 16px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid rgba(56, 239, 213, 0.2);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+    }
+    
+    @media (max-width: 600px) {
+        .form-row {
+            grid-template-columns: 1fr;
+        }
+    }
+    
+    .form-group {
+        margin-bottom: 20px;
+    }
+    
+    .form-group label {
+        display: block;
+        color: var(--text-secondary);
+        font-size: 13px;
+        font-weight: 500;
+        margin-bottom: 8px;
+    }
+    
+    .form-group label .required {
+        color: #f87171;
+        margin-left: 2px;
+    }
+    
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+        width: 100%;
+        padding: 12px 16px;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 10px;
+        font-size: 14px;
+        color: var(--text-primary);
+        transition: all 0.3s;
+    }
+    
+    .form-group input[type="file"] {
+        padding: 10px;
+    }
+    
+    .form-group input::placeholder,
+    .form-group textarea::placeholder {
+        color: var(--text-muted);
+    }
+    
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+        outline: none;
+        border-color: rgba(56, 239, 213, 0.5);
+        background: rgba(255, 255, 255, 0.08);
+        box-shadow: 0 0 0 3px rgba(56, 239, 213, 0.1);
+    }
+    
+    .form-group textarea {
+        min-height: 120px;
+        resize: vertical;
+    }
+    
+    .form-group select option {
+        background: var(--bg-secondary);
+        color: var(--text-primary);
+    }
+    
+    .help-text {
+        font-size: 12px;
+        color: var(--text-muted);
+        margin-top: 6px;
+        line-height: 1.5;
+    }
+    
+    .image-preview {
+        margin: 12px 0;
+        padding: 12px;
+        background: rgba(255, 255, 255, 0.02);
+        border-radius: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    
+    .image-preview img {
+        max-width: 200px;
+        border-radius: 8px;
+    }
+    
+    .clear-image-label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 10px;
+        color: #f87171;
+        font-size: 13px;
+        cursor: pointer;
+    }
+    
+    .clear-image-label input {
+        width: auto;
+        accent-color: #f87171;
+    }
+    
+    .options-container {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+    
+    .option-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    
+    .option-item .option-label {
+        width: 32px;
+        height: 32px;
+        background: rgba(56, 239, 213, 0.15);
+        color: var(--accent-primary);
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        font-size: 14px;
+        flex-shrink: 0;
+    }
+    
+    .option-item input[type="text"] {
+        flex: 1;
+    }
+    
+    .form-actions {
+        display: flex;
+        gap: 12px;
+        justify-content: flex-end;
+        margin-top: 32px;
+        padding-top: 24px;
+        border-top: 1px solid rgba(255, 255, 255, 0.05);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">
+        <i class="ri-{% if action == 'create' %}add-circle{% else %}edit{% endif %}-line"></i>
+        {% if action == 'create' %}添加题目{% else %}编辑题目{% endif %}
+    </h1>
+    <p class="page-subtitle">{% if action == 'create' %}向题库添加新的题目{% else %}修改题目内容和设置{% endif %}</p>
+</div>
+
+<div class="form-container">
+    <div class="form-card">
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            
+            <!-- 基本信息 -->
+            <div class="form-section">
+                <div class="form-section-title">
+                    <i class="ri-information-line"></i> 基本信息
+                </div>
+                
+                <div class="form-group">
+                    <label>题目标题 <span class="required">*</span></label>
+                    <input type="text" name="title" value="{% if question %}{{ question.title }}{% endif %}" placeholder="简明扼要的题目标题" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>题目内容 <span class="required">*</span></label>
+                    <textarea name="content" rows="5" placeholder="详细的题目描述，支持HTML格式" required>{% if question %}{{ question.content }}{% endif %}</textarea>
+                    <div class="help-text">可以使用HTML标签格式化内容，如 &lt;b&gt;加粗&lt;/b&gt;</div>
+                </div>
+            </div>
+            
+            <!-- 题目类型 -->
+            <div class="form-section">
+                <div class="form-section-title">
+                    <i class="ri-settings-3-line"></i> 题目设置
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>题目类型 <span class="required">*</span></label>
+                        <select name="question_type" id="question_type" required onchange="toggleOptions()">
+                            <option value="">请选择</option>
+                            <option value="single" {% if question and question.question_type == 'single' %}selected{% endif %}>单选题</option>
+                            <option value="multiple" {% if question and question.question_type == 'multiple' %}selected{% endif %}>多选题</option>
+                            <option value="judge" {% if question and question.question_type == 'judge' %}selected{% endif %}>判断题</option>
+                            <option value="subjective" {% if question and question.question_type == 'subjective' %}selected{% endif %}>主观题</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>难度等级 <span class="required">*</span></label>
+                        <select name="difficulty" required>
+                            <option value="easy" {% if question and question.difficulty == 'easy' %}selected{% endif %}>简单</option>
+                            <option value="medium" {% if question and question.difficulty == 'medium' %}selected{% endif %}>中等</option>
+                            <option value="hard" {% if question and question.difficulty == 'hard' %}selected{% endif %}>困难</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>题目分类</label>
+                        <select name="category">
+                            <option value="">未分类</option>
+                            {% for cat in categories %}
+                            <option value="{{ cat.id }}" {% if question and question.category_id == cat.id %}selected{% endif %}>{{ cat.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>分值 <span class="required">*</span></label>
+                        <input type="number" name="score" value="{% if question %}{{ question.score }}{% else %}5{% endif %}" min="1" required>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 图片上传 -->
+            <div class="form-section">
+                <div class="form-section-title">
+                    <i class="ri-image-line"></i> 题目图片
+                </div>
+                
+                <div class="form-group">
+                    {% if question and question.image %}
+                    <div class="image-preview">
+                        <img src="{{ question.image.url }}" alt="题目图片">
+                    </div>
+                    <label class="clear-image-label">
+                        <input type="checkbox" name="clear_image">
+                        <span>删除当前图片</span>
+                    </label>
+                    {% endif %}
+                    <input type="file" name="image" accept="image/*">
+                    <div class="help-text">支持 JPG、PNG、GIF 格式，建议小于 2MB</div>
+                </div>
+            </div>
+            
+            <!-- 选项设置 -->
+            <div id="options_section" class="form-section" style="display: none;">
+                <div class="form-section-title">
+                    <i class="ri-list-check-2"></i> 选项设置
+                </div>
+                
+                <div class="options-container" id="options_container">
+                    {% if question %}
+                        {% if question.question_type == 'single' or question.question_type == 'multiple' %}
+                            {% if question.options %}
+                                {% for key, value in question.options.items %}
+                                <div class="option-item">
+                                    <span class="option-label">{{ key }}</span>
+                                    <input type="text" name="option_{{ key }}" value="{{ value }}" placeholder="选项内容">
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="option-item">
+                                    <span class="option-label">A</span>
+                                    <input type="text" name="option_A" placeholder="选项A">
+                                </div>
+                                <div class="option-item">
+                                    <span class="option-label">B</span>
+                                    <input type="text" name="option_B" placeholder="选项B">
+                                </div>
+                                <div class="option-item">
+                                    <span class="option-label">C</span>
+                                    <input type="text" name="option_C" placeholder="选项C">
+                                </div>
+                                <div class="option-item">
+                                    <span class="option-label">D</span>
+                                    <input type="text" name="option_D" placeholder="选项D">
+                                </div>
+                            {% endif %}
+                        {% else %}
+                            <div class="option-item">
+                                <span class="option-label">A</span>
+                                <input type="text" name="option_A" placeholder="选项A">
+                            </div>
+                            <div class="option-item">
+                                <span class="option-label">B</span>
+                                <input type="text" name="option_B" placeholder="选项B">
+                            </div>
+                            <div class="option-item">
+                                <span class="option-label">C</span>
+                                <input type="text" name="option_C" placeholder="选项C">
+                            </div>
+                            <div class="option-item">
+                                <span class="option-label">D</span>
+                                <input type="text" name="option_D" placeholder="选项D">
+                            </div>
+                        {% endif %}
+                    {% else %}
+                        <div class="option-item">
+                            <span class="option-label">A</span>
+                            <input type="text" name="option_A" placeholder="选项A">
+                        </div>
+                        <div class="option-item">
+                            <span class="option-label">B</span>
+                            <input type="text" name="option_B" placeholder="选项B">
+                        </div>
+                        <div class="option-item">
+                            <span class="option-label">C</span>
+                            <input type="text" name="option_C" placeholder="选项C">
+                        </div>
+                        <div class="option-item">
+                            <span class="option-label">D</span>
+                            <input type="text" name="option_D" placeholder="选项D">
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- 答案与解析 -->
+            <div class="form-section">
+                <div class="form-section-title">
+                    <i class="ri-checkbox-circle-line"></i> 答案与解析
+                </div>
+                
+                <div class="form-group">
+                    <label>正确答案 <span class="required">*</span></label>
+                    <input type="text" name="correct_answer" value="{% if question %}{{ question.correct_answer }}{% endif %}" placeholder="如：A 或 A,B,C 或 True">
+                    <div class="help-text">
+                        单选题：填写选项字母（如 A）<br>
+                        多选题：用逗号分隔（如 A,B,C）<br>
+                        判断题：填写 True 或 False<br>
+                        主观题：可留空或填写参考答案
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>题目解析</label>
+                    <textarea name="explanation" rows="3" placeholder="可选，填写答案解析帮助学生理解">{% if question %}{{ question.explanation }}{% endif %}</textarea>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <a href="{% url 'exam:question_list' %}" class="btn btn-secondary">
+                    <i class="ri-close-line"></i> 取消
+                </a>
+                <button type="submit" class="btn btn-primary">
+                    <i class="ri-check-line"></i> 保存
+                </button>
+            </div>
+        </form>
+    </div>
+    
+    {% if question %}
+    <div class="preview-card">
+        <div class="preview-title">
+            <i class="ri-eye-line"></i> 题干预览
+        </div>
+        <div class="preview-content">{{ question.content|safe }}</div>
+        {% if question.image %}
+        <div class="preview-image">
+            <img src="{{ question.image.url }}" alt="题目图片">
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function toggleOptions() {
+        const questionType = document.getElementById('question_type').value;
+        const optionsSection = document.getElementById('options_section');
+        
+        if (questionType === 'single' || questionType === 'multiple') {
+            optionsSection.style.display = 'block';
+        } else {
+            optionsSection.style.display = 'none';
+        }
+    }
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        toggleOptions();
+    });
+</script>
+{% endblock %}

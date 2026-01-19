@@ -1,0 +1,367 @@
+{% extends 'base.html' %}
+
+{% block title %}题库管理 - 智能学习系统{% endblock %}
+
+{% block header_nav %}
+<nav class="header-nav">
+    <a href="{% url 'exam:admin_dashboard' %}" class="nav-link">
+        <i class="ri-dashboard-3-line"></i> 控制台
+    </a>
+    <a href="{% url 'exam:exam_list' %}" class="nav-link">
+        <i class="ri-calendar-check-line"></i> 考试管理
+    </a>
+    <a href="{% url 'exam:question_list' %}" class="nav-link active">
+        <i class="ri-file-list-3-line"></i> 题库管理
+    </a>
+    <a href="{% url 'exam:exam_statistics_entry' %}" class="nav-link">
+        <i class="ri-pie-chart-line"></i> 成绩统计
+    </a>
+</nav>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-actions {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+    
+    .bulk-bar {
+        background: rgba(251, 191, 36, 0.1);
+        border: 1px solid rgba(251, 191, 36, 0.3);
+        border-radius: 12px;
+        padding: 16px 20px;
+        margin-bottom: 20px;
+        display: none;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: center;
+    }
+    
+    .bulk-bar.show {
+        display: flex;
+    }
+    
+    .bulk-bar .note {
+        color: var(--accent-yellow);
+        font-size: 13px;
+        margin-right: 8px;
+    }
+    
+    .bulk-bar input,
+    .bulk-bar select {
+        padding: 8px 12px;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        color: var(--text-primary);
+        font-size: 13px;
+    }
+    
+    .bulk-bar input::placeholder {
+        color: var(--text-muted);
+    }
+    
+    .bulk-col {
+        display: none;
+    }
+    
+    .bulk-mode .bulk-col {
+        display: table-cell;
+    }
+    
+    .table-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        overflow: hidden;
+    }
+    
+    .data-table {
+        width: 100%;
+    }
+    
+    .data-table th {
+        background: rgba(255, 255, 255, 0.02);
+        padding: 16px;
+    }
+    
+    .data-table td {
+        padding: 14px 16px;
+        vertical-align: middle;
+    }
+    
+    .data-table tbody tr {
+        border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    }
+    
+    .data-table tbody tr:last-child {
+        border-bottom: none;
+    }
+    
+    .q-title {
+        max-width: 280px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        color: var(--text-primary);
+    }
+    
+    .tag-single { background: rgba(56, 239, 213, 0.15); color: var(--accent-primary); }
+    .tag-multiple { background: rgba(249, 115, 22, 0.15); color: var(--accent-orange); }
+    .tag-judge { background: rgba(155, 93, 229, 0.15); color: var(--accent-purple); }
+    .tag-subjective { background: rgba(0, 187, 249, 0.15); color: var(--accent-secondary); }
+    
+    .tag-easy { background: rgba(34, 197, 94, 0.15); color: var(--accent-green); }
+    .tag-medium { background: rgba(251, 191, 36, 0.15); color: var(--accent-yellow); }
+    .tag-hard { background: rgba(239, 68, 68, 0.15); color: #f87171; }
+    
+    .action-btns {
+        display: flex;
+        gap: 6px;
+    }
+    
+    .action-btns .btn {
+        padding: 6px 12px;
+        font-size: 12px;
+    }
+    
+    .empty-state {
+        padding: 60px 20px;
+        text-align: center;
+    }
+    
+    .checkbox-cell {
+        width: 40px;
+    }
+    
+    .checkbox-cell input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        accent-color: var(--accent-primary);
+        cursor: pointer;
+    }
+    
+    @media (max-width: 1200px) {
+        .data-table {
+            display: block;
+            overflow-x: auto;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">
+        <i class="ri-file-list-3-line"></i>
+        题库管理
+    </h1>
+    <p class="page-subtitle">管理所有题目，支持筛选、搜索和批量操作</p>
+    <div class="page-actions">
+        <a href="{% url 'exam:question_create' %}" class="btn btn-primary">
+            <i class="ri-add-line"></i> 添加题目
+        </a>
+        <a href="{% url 'exam:question_import' %}" class="btn btn-success">
+            <i class="ri-upload-2-line"></i> 批量导入
+        </a>
+        <button type="button" class="btn btn-warning" id="bulkToggle">
+            <i class="ri-checkbox-multiple-line"></i> 批量管理
+        </button>
+    </div>
+</div>
+
+<!-- 筛选栏 -->
+<div class="filter-bar">
+    <form method="get" style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center; width: 100%;">
+        <div class="search-input-wrap" style="flex: 1; min-width: 200px;">
+            <i class="ri-search-line"></i>
+            <input type="text" name="search" value="{{ search_query }}" placeholder="搜索题目标题或内容...">
+        </div>
+        <div class="filter-item">
+            <label>分类</label>
+            <select name="category" class="form-control" style="width: auto;">
+                <option value="">全部</option>
+                {% for cat in categories %}
+                <option value="{{ cat.id }}" {% if selected_category == cat.id|stringformat:"s" %}selected{% endif %}>{{ cat.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="filter-item">
+            <label>类型</label>
+            <select name="type" class="form-control" style="width: auto;">
+                <option value="">全部</option>
+                <option value="single" {% if selected_type == 'single' %}selected{% endif %}>单选题</option>
+                <option value="multiple" {% if selected_type == 'multiple' %}selected{% endif %}>多选题</option>
+                <option value="judge" {% if selected_type == 'judge' %}selected{% endif %}>判断题</option>
+            </select>
+        </div>
+        <div class="filter-item">
+            <label>难度</label>
+            <select name="difficulty" class="form-control" style="width: auto;">
+                <option value="">全部</option>
+                <option value="easy" {% if selected_difficulty == 'easy' %}selected{% endif %}>简单</option>
+                <option value="medium" {% if selected_difficulty == 'medium' %}selected{% endif %}>中等</option>
+                <option value="hard" {% if selected_difficulty == 'hard' %}selected{% endif %}>困难</option>
+            </select>
+        </div>
+        <button type="submit" class="btn btn-primary btn-sm">
+            <i class="ri-filter-line"></i> 筛选
+        </button>
+        <a href="{% url 'exam:question_list' %}" class="btn btn-secondary btn-sm">
+            <i class="ri-refresh-line"></i> 重置
+        </a>
+    </form>
+</div>
+
+<!-- 批量操作栏 -->
+<form method="post" id="bulkForm">
+    {% csrf_token %}
+    <input type="hidden" name="bulk_action" value="update">
+    <div class="bulk-bar" id="bulkBar">
+        <span class="note"><i class="ri-information-line"></i> 勾选题目后可批量修改：</span>
+        <input type="text" name="bulk_title_prefix" placeholder="标题前缀">
+        <select name="bulk_question_type">
+            <option value="">题型不变</option>
+            <option value="single">单选题</option>
+            <option value="multiple">多选题</option>
+            <option value="judge">判断题</option>
+        </select>
+        <select name="bulk_difficulty">
+            <option value="">难度不变</option>
+            <option value="easy">简单</option>
+            <option value="medium">中等</option>
+            <option value="hard">困难</option>
+        </select>
+        <select name="bulk_category">
+            <option value="">分类不变</option>
+            <option value="__none">设为未分类</option>
+            {% for cat in categories %}
+            <option value="{{ cat.id }}">{{ cat.name }}</option>
+            {% endfor %}
+        </select>
+        <input type="number" name="bulk_score" min="1" placeholder="分值" style="width: 80px;">
+        <button type="submit" class="btn btn-primary btn-sm">
+            <i class="ri-check-line"></i> 应用修改
+        </button>
+    </div>
+    
+    <!-- 数据表格 -->
+    <div class="table-card">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th class="checkbox-cell bulk-col">
+                        <input type="checkbox" id="selectAll">
+                    </th>
+                    <th style="width: 60px;">ID</th>
+                    <th>题目标题</th>
+                    <th style="width: 90px;">类型</th>
+                    <th style="width: 80px;">难度</th>
+                    <th style="width: 100px;">分类</th>
+                    <th style="width: 70px;">分值</th>
+                    <th style="width: 100px;">创建时间</th>
+                    <th style="width: 160px;">操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for question in page_obj %}
+                <tr>
+                    <td class="checkbox-cell bulk-col">
+                        <input type="checkbox" name="selected" value="{{ question.id }}" class="row-check">
+                    </td>
+                    <td>{{ question.id }}</td>
+                    <td>
+                        <div class="q-title" title="{{ question.title }}">{{ question.title }}</div>
+                    </td>
+                    <td>
+                        <span class="tag tag-{{ question.question_type }}">{{ question.get_question_type_display }}</span>
+                    </td>
+                    <td>
+                        <span class="tag tag-{{ question.difficulty }}">{{ question.get_difficulty_display }}</span>
+                    </td>
+                    <td>{{ question.category.name|default:"未分类" }}</td>
+                    <td>{{ question.score }}分</td>
+                    <td>{{ question.created_at|date:"m-d H:i" }}</td>
+                    <td>
+                        <div class="action-btns">
+                            <a href="{% url 'exam:question_detail' question.id %}" class="btn btn-secondary btn-sm">
+                                <i class="ri-eye-line"></i>
+                            </a>
+                            <a href="{% url 'exam:question_edit' question.id %}" class="btn btn-success btn-sm">
+                                <i class="ri-edit-line"></i>
+                            </a>
+                            <a href="{% url 'exam:question_delete' question.id %}" class="btn btn-danger btn-sm" onclick="return confirm('确定要删除这道题目吗？');">
+                                <i class="ri-delete-bin-line"></i>
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="9">
+                        <div class="empty-state">
+                            <i class="ri-file-list-3-line"></i>
+                            <p>暂无题目数据</p>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</form>
+
+<!-- 分页 -->
+{% if page_obj.has_other_pages %}
+<div class="pagination">
+    {% if page_obj.has_previous %}
+    <a href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if selected_category %}&category={{ selected_category }}{% endif %}{% if selected_type %}&type={{ selected_type }}{% endif %}{% if selected_difficulty %}&difficulty={{ selected_difficulty }}{% endif %}">
+        <i class="ri-arrow-left-s-line"></i> 上一页
+    </a>
+    {% endif %}
+    
+    <span class="current">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+    
+    {% if page_obj.has_next %}
+    <a href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if selected_category %}&category={{ selected_category }}{% endif %}{% if selected_type %}&type={{ selected_type }}{% endif %}{% if selected_difficulty %}&difficulty={{ selected_difficulty }}{% endif %}">
+        下一页 <i class="ri-arrow-right-s-line"></i>
+    </a>
+    {% endif %}
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const selectAll = document.getElementById('selectAll');
+    const rows = document.querySelectorAll('.row-check');
+    const bulkToggle = document.getElementById('bulkToggle');
+    const bulkBar = document.getElementById('bulkBar');
+    const tableCard = document.querySelector('.table-card');
+    
+    // 全选/取消全选
+    if (selectAll) {
+        selectAll.addEventListener('change', () => {
+            rows.forEach(chk => chk.checked = selectAll.checked);
+        });
+    }
+    
+    // 批量管理切换
+    if (bulkToggle) {
+        bulkToggle.addEventListener('click', () => {
+            const isActive = bulkBar.classList.toggle('show');
+            tableCard.classList.toggle('bulk-mode');
+            bulkToggle.innerHTML = isActive 
+                ? '<i class="ri-close-line"></i> 退出批量' 
+                : '<i class="ri-checkbox-multiple-line"></i> 批量管理';
+            
+            if (!isActive && selectAll) {
+                selectAll.checked = false;
+                rows.forEach(chk => chk.checked = false);
+            }
+        });
+    }
+</script>
+{% endblock %}

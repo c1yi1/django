@@ -1,0 +1,237 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if action == 'create' %}创建考试{% else %}编辑考试{% endif %} - 智能学习系统{% endblock %}
+
+{% block header_nav %}
+<nav class="header-nav">
+    <a href="{% url 'exam:admin_dashboard' %}" class="nav-link">
+        <i class="ri-dashboard-3-line"></i> 控制台
+    </a>
+    <a href="{% url 'exam:exam_list' %}" class="nav-link active">
+        <i class="ri-calendar-check-line"></i> 考试管理
+    </a>
+    <a href="{% url 'exam:question_list' %}" class="nav-link">
+        <i class="ri-file-list-3-line"></i> 题库管理
+    </a>
+</nav>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 32px;
+        max-width: 800px;
+    }
+    
+    .form-section {
+        margin-bottom: 28px;
+    }
+    
+    .form-section-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--accent-primary);
+        margin-bottom: 16px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid rgba(56, 239, 213, 0.2);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+    }
+    
+    @media (max-width: 600px) {
+        .form-row {
+            grid-template-columns: 1fr;
+        }
+    }
+    
+    .form-group {
+        margin-bottom: 20px;
+    }
+    
+    .form-group label {
+        display: block;
+        color: var(--text-secondary);
+        font-size: 13px;
+        font-weight: 500;
+        margin-bottom: 8px;
+    }
+    
+    .form-group label .required {
+        color: #f87171;
+        margin-left: 2px;
+    }
+    
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+        width: 100%;
+        padding: 12px 16px;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 10px;
+        font-size: 14px;
+        color: var(--text-primary);
+        transition: all 0.3s;
+    }
+    
+    .form-group input::placeholder,
+    .form-group textarea::placeholder {
+        color: var(--text-muted);
+    }
+    
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+        outline: none;
+        border-color: rgba(56, 239, 213, 0.5);
+        background: rgba(255, 255, 255, 0.08);
+        box-shadow: 0 0 0 3px rgba(56, 239, 213, 0.1);
+    }
+    
+    .form-group textarea {
+        min-height: 120px;
+        resize: vertical;
+    }
+    
+    .form-group select {
+        cursor: pointer;
+    }
+    
+    .form-group select option {
+        background: var(--bg-secondary);
+        color: var(--text-primary);
+    }
+    
+    .help-text {
+        font-size: 12px;
+        color: var(--text-muted);
+        margin-top: 6px;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+    
+    .form-actions {
+        display: flex;
+        gap: 12px;
+        justify-content: flex-end;
+        margin-top: 32px;
+        padding-top: 24px;
+        border-top: 1px solid rgba(255, 255, 255, 0.05);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">
+        <i class="ri-{% if action == 'create' %}add-circle{% else %}edit{% endif %}-line"></i>
+        {% if action == 'create' %}创建考试{% else %}编辑考试{% endif %}
+    </h1>
+    <p class="page-subtitle">{% if action == 'create' %}填写考试信息并创建新考试{% else %}修改考试配置{% endif %}</p>
+</div>
+
+<div class="form-card">
+    <form method="post">
+        {% csrf_token %}
+        
+        <!-- 基本信息 -->
+        <div class="form-section">
+            <div class="form-section-title">
+                <i class="ri-information-line"></i> 基本信息
+            </div>
+            
+            <div class="form-group">
+                <label>考试名称 <span class="required">*</span></label>
+                <input type="text" name="title" value="{% if exam %}{{ exam.title }}{% endif %}" placeholder="请输入考试名称" required>
+            </div>
+            
+            <div class="form-group">
+                <label>考试描述</label>
+                <textarea name="description" placeholder="可选，填写考试说明或注意事项">{% if exam %}{{ exam.description }}{% endif %}</textarea>
+            </div>
+        </div>
+        
+        <!-- 时间设置 -->
+        <div class="form-section">
+            <div class="form-section-title">
+                <i class="ri-time-line"></i> 时间设置
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label>开始时间 <span class="required">*</span></label>
+                    <input type="datetime-local" name="start_time" value="{% if exam %}{{ exam.start_time|date:'Y-m-d\TH:i' }}{% endif %}" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>结束时间 <span class="required">*</span></label>
+                    <input type="datetime-local" name="end_time" value="{% if exam %}{{ exam.end_time|date:'Y-m-d\TH:i' }}{% endif %}" required>
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label>考试时长（分钟） <span class="required">*</span></label>
+                    <input type="number" name="duration" value="{% if exam %}{{ exam.duration }}{% else %}60{% endif %}" min="1" required>
+                    <div class="help-text"><i class="ri-information-line"></i> 学生进入考试后的答题时限</div>
+                </div>
+                
+                <div class="form-group">
+                    <label>状态 <span class="required">*</span></label>
+                    <select name="status" required>
+                        <option value="draft" {% if exam and exam.status == 'draft' %}selected{% endif %}>草稿</option>
+                        <option value="published" {% if exam and exam.status == 'published' %}selected{% endif %}>已发布</option>
+                        <option value="ongoing" {% if exam and exam.status == 'ongoing' %}selected{% endif %}>进行中</option>
+                        <option value="finished" {% if exam and exam.status == 'finished' %}selected{% endif %}>已结束</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 分数设置 -->
+        <div class="form-section">
+            <div class="form-section-title">
+                <i class="ri-trophy-line"></i> 分数设置
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label>总分 <span class="required">*</span></label>
+                    <input type="number" name="total_score" value="{% if exam %}{{ exam.total_score }}{% else %}100{% endif %}" min="1" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>及格分数 <span class="required">*</span></label>
+                    <input type="number" name="pass_score" value="{% if exam %}{{ exam.pass_score }}{% else %}60{% endif %}" min="0" required>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label>最大尝试次数 <span class="required">*</span></label>
+                <input type="number" name="max_attempts" value="{% if exam %}{{ exam.max_attempts }}{% else %}1{% endif %}" min="1" required>
+                <div class="help-text"><i class="ri-information-line"></i> 每个学生可以参加该考试的最大次数</div>
+            </div>
+        </div>
+        
+        <div class="form-actions">
+            <a href="{% url 'exam:exam_list' %}" class="btn btn-secondary">
+                <i class="ri-close-line"></i> 取消
+            </a>
+            <button type="submit" class="btn btn-primary">
+                <i class="ri-check-line"></i> 保存
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

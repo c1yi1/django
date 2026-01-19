@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>批阅试卷 - {{ exam.title }} - 在线考试平台</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Microsoft YaHei', Arial, sans-serif; background: #f5f5f5; }
+        .header { background: white; padding: 15px 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .header-content { max-width: 1200px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; }
+        .btn { padding: 8px 20px; border: none; border-radius: 5px; cursor: pointer; text-decoration: none; display: inline-block; font-size: 14px; }
+        .btn-secondary { background: #6c757d; color: white; }
+        .btn-primary { background: #667eea; color: white; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 0 20px 40px; }
+        .info-card { background: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .answer-card { background: white; border-radius: 8px; padding: 20px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .answer-header { display: flex; justify-content: space-between; margin-bottom: 12px; }
+        .form-group { margin-top: 10px; }
+        textarea { width: 100%; min-height: 80px; padding: 8px; border-radius: 4px; border: 1px solid #ccc; resize: vertical; }
+        input[type="number"] { width: 100px; padding: 6px; border-radius: 4px; border: 1px solid #ccc; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <div><strong>批阅试卷 - {{ exam.title }}</strong></div>
+            <div>
+                <a href="{% url 'exam:exam_attempt_list' exam.id %}" class="btn btn-secondary">返回答卷列表</a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="container">
+        <div class="info-card">
+            <p>考生：{{ attempt.user.username }}</p>
+            <p>开始时间：{{ attempt.start_time|date:"Y-m-d H:i:s" }} | 提交时间：{{ attempt.submit_time|date:"Y-m-d H:i:s"|default:"未提交" }}</p>
+            <p>当前总分：{{ attempt.total_score }} / {{ exam.total_score }} 分</p>
+        </div>
+        
+        <form method="post">
+            {% csrf_token %}
+            {% for answer in answers %}
+            <div class="answer-card">
+                <div class="answer-header">
+                    <div>
+                        <strong>第{% if question_order_map|get_item:answer.question.id %}{{ question_order_map|get_item:answer.question.id }}{% else %}{{ forloop.counter }}{% endif %}题</strong>
+                        <span style="color:#666; margin-left:10px;">{{ answer.question.get_question_type_display }}</span>
+                    </div>
+                    <div>
+                        <span>满分：{{ answer.question.score }} 分</span>
+                    </div>
+                </div>
+                <div style="margin-bottom:10px; word-wrap: break-word; white-space: pre-wrap;">
+                    {{ answer.question.content|safe }}
+                </div>
+                <div style="margin-bottom:10px; word-wrap: break-word; white-space: pre-wrap;">
+                    <strong>考生答案：</strong>{{ answer.user_answer }}
+                </div>
+                
+                {% if answer.question.question_type != 'subjective' %}
+                <div style="margin-bottom:10px;">
+                    <strong>标准答案：</strong>
+                    {% if answer.question.question_type == 'judge' %}
+                        {% if answer.question.correct_answer == 'True' %}正确{% else %}错误{% endif %}
+                    {% elif answer.question.question_type == 'multiple' %}
+                        {{ answer.question.get_correct_answer_list|join:", " }}
+                    {% else %}
+                        {{ answer.question.correct_answer }}
+                    {% endif %}
+                </div>
+                <div class="form-group">
+                    <label>系统评分：{{ answer.score }} 分</label>
+                </div>
+                {% else %}
+                <div class="form-group">
+                    <label>教师评分：</label>
+                    <input type="number" name="score_{{ answer.id }}" min="0" max="{{ answer.question.score }}" step="0.5" value="{{ answer.score }}">
+                    <span style="font-size:12px; color:#666;">（0 - {{ answer.question.score }} 分，可输入小数）</span>
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+            
+            <div style="text-align:right; margin-top:20px;">
+                <button type="submit" class="btn btn-primary">保存批阅结果并重新计算总分</button>
+            </div>
+        </form>
+    </div>
+</body>
+</html>
+
+
+
+
+

@@ -1,0 +1,480 @@
+{% extends 'base.html' %}
+{% load exam_tags %}
+
+{% block title %}考试结果 - {{ exam.title }} - 智能学习系统{% endblock %}
+
+{% block header_nav %}
+<nav class="header-nav">
+    <a href="{% url 'accounts:home' %}" class="nav-link">
+        <i class="ri-home-4-line"></i> 首页
+    </a>
+    <a href="{% url 'exam:exam_list_student' %}" class="nav-link">
+        <i class="ri-edit-circle-line"></i> 考试
+    </a>
+    <a href="{% url 'exam:my_scores' %}" class="nav-link active">
+        <i class="ri-bar-chart-line"></i> 成绩
+    </a>
+</nav>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .result-header {
+        text-align: center;
+        margin-bottom: 32px;
+    }
+    
+    .result-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 20px;
+        padding: 48px;
+        text-align: center;
+        margin-bottom: 32px;
+    }
+    
+    .result-icon {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 20px;
+        font-size: 40px;
+    }
+    
+    .result-icon.passed {
+        background: rgba(34, 197, 94, 0.15);
+        color: var(--accent-green);
+    }
+    
+    .result-icon.failed {
+        background: rgba(239, 68, 68, 0.15);
+        color: #f87171;
+    }
+    
+    .result-title {
+        font-size: 24px;
+        color: var(--text-primary);
+        margin-bottom: 24px;
+    }
+    
+    .score-display {
+        font-size: 72px;
+        font-weight: 700;
+        margin-bottom: 16px;
+        line-height: 1;
+    }
+    
+    .score-display.passed {
+        background: linear-gradient(135deg, var(--accent-green), var(--accent-primary));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+    
+    .score-display.failed {
+        background: linear-gradient(135deg, #f87171, #fbbf24);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+    
+    .score-info {
+        color: var(--text-muted);
+        font-size: 15px;
+        line-height: 1.8;
+    }
+    
+    .result-status {
+        display: inline-block;
+        padding: 10px 24px;
+        border-radius: 30px;
+        font-size: 16px;
+        font-weight: 600;
+        margin-top: 20px;
+    }
+    
+    .result-status.passed {
+        background: rgba(34, 197, 94, 0.15);
+        color: var(--accent-green);
+        border: 1px solid rgba(34, 197, 94, 0.3);
+    }
+    
+    .result-status.failed {
+        background: rgba(239, 68, 68, 0.15);
+        color: #f87171;
+        border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+    
+    /* 题型统计 */
+    .stats-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 24px;
+        margin-bottom: 32px;
+    }
+    
+    .stats-title {
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .stats-title i {
+        color: var(--accent-primary);
+    }
+    
+    .stats-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    
+    .stats-table th {
+        background: rgba(255, 255, 255, 0.02);
+        padding: 12px 16px;
+        text-align: left;
+        font-weight: 500;
+        color: var(--text-muted);
+        font-size: 13px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    
+    .stats-table td {
+        padding: 12px 16px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+        color: var(--text-secondary);
+    }
+    
+    /* 答题详情 */
+    .answers-section {
+        margin-top: 32px;
+    }
+    
+    .answers-title {
+        font-size: 18px;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .answers-title i {
+        color: var(--accent-primary);
+    }
+    
+    .answer-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 24px;
+        margin-bottom: 16px;
+        border-left: 4px solid transparent;
+    }
+    
+    .answer-card.correct {
+        border-left-color: var(--accent-green);
+    }
+    
+    .answer-card.wrong {
+        border-left-color: #f87171;
+    }
+    
+    .answer-card.pending {
+        border-left-color: var(--accent-yellow);
+    }
+    
+    .answer-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 16px;
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+    
+    .answer-number {
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+    
+    .answer-type {
+        color: var(--text-muted);
+        font-size: 13px;
+        margin-left: 12px;
+    }
+    
+    .answer-meta {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    
+    .answer-status {
+        padding: 4px 12px;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+    
+    .answer-status.correct {
+        background: rgba(34, 197, 94, 0.15);
+        color: var(--accent-green);
+    }
+    
+    .answer-status.wrong {
+        background: rgba(239, 68, 68, 0.15);
+        color: #f87171;
+    }
+    
+    .answer-status.pending {
+        background: rgba(148, 163, 184, 0.15);
+        color: #94a3b8;
+    }
+    
+    .answer-score {
+        color: var(--text-muted);
+        font-size: 13px;
+    }
+    
+    .question-content {
+        color: var(--text-secondary);
+        line-height: 1.7;
+        margin-bottom: 16px;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+    }
+    
+    .options-list {
+        margin-bottom: 16px;
+        padding-left: 16px;
+    }
+    
+    .option-item {
+        padding: 10px 14px;
+        background: rgba(255, 255, 255, 0.02);
+        border-radius: 8px;
+        margin-bottom: 8px;
+        color: var(--text-secondary);
+    }
+    
+    .option-key {
+        color: var(--accent-primary);
+        font-weight: 600;
+        margin-right: 8px;
+    }
+    
+    .answer-row {
+        display: flex;
+        gap: 24px;
+        margin-bottom: 12px;
+        flex-wrap: wrap;
+    }
+    
+    .answer-item {
+        display: flex;
+        gap: 8px;
+    }
+    
+    .answer-label {
+        color: var(--text-muted);
+        font-size: 13px;
+    }
+    
+    .answer-value {
+        color: var(--text-primary);
+        font-weight: 500;
+    }
+    
+    .answer-value.correct {
+        color: var(--accent-green);
+    }
+    
+    .answer-value.wrong {
+        color: #f87171;
+    }
+    
+    .explanation-box {
+        margin-top: 16px;
+        padding: 16px;
+        background: rgba(155, 93, 229, 0.1);
+        border: 1px solid rgba(155, 93, 229, 0.2);
+        border-radius: 10px;
+    }
+    
+    .explanation-label {
+        color: var(--accent-purple);
+        font-weight: 600;
+        margin-bottom: 8px;
+        font-size: 13px;
+    }
+    
+    .explanation-text {
+        color: var(--text-secondary);
+        line-height: 1.7;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- 成绩卡片 -->
+<div class="result-card">
+    <div class="result-icon {% if attempt.is_passed %}passed{% else %}failed{% endif %}">
+        {% if attempt.is_passed %}
+        <i class="ri-trophy-fill"></i>
+        {% else %}
+        <i class="ri-emotion-sad-line"></i>
+        {% endif %}
+    </div>
+    
+    <h1 class="result-title">{{ exam.title }}</h1>
+    
+    <div class="score-display {% if attempt.is_passed %}passed{% else %}failed{% endif %}">
+        {{ attempt.total_score }}分
+    </div>
+    
+    <div class="score-info">
+        <p>总分：{{ exam.total_score }}分 | 及格分：{{ exam.pass_score }}分</p>
+        <p>答题时长：{{ attempt.get_duration }}秒 | 状态：{{ attempt.get_status_display }}</p>
+    </div>
+    
+    <div class="result-status {% if attempt.is_passed %}passed{% else %}failed{% endif %}">
+        {% if attempt.is_passed %}
+        <i class="ri-checkbox-circle-fill"></i> 恭喜您通过了考试！
+        {% else %}
+        <i class="ri-close-circle-fill"></i> 很遗憾，您未通过考试
+        {% endif %}
+    </div>
+</div>
+
+<!-- 题型统计 -->
+{% if type_stats %}
+<div class="stats-card">
+    <h3 class="stats-title">
+        <i class="ri-pie-chart-line"></i> 按题型成绩分析
+    </h3>
+    <table class="stats-table">
+        <thead>
+            <tr>
+                <th>题型</th>
+                <th>题目数量</th>
+                <th>满分</th>
+                <th>得分</th>
+                <th>正确题数</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for key, stat in type_stats.items %}
+            <tr>
+                <td>{{ stat.label }}</td>
+                <td>{{ stat.question_count }} 题</td>
+                <td>{{ stat.full_score }} 分</td>
+                <td>{{ stat.got_score }} 分</td>
+                <td>
+                    {% if key != 'subjective' %}
+                        {{ stat.correct_count }} 题
+                    {% else %}
+                        —
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+<!-- 答题详情 -->
+{% if exam.show_answer %}
+<div class="answers-section">
+    <h3 class="answers-title">
+        <i class="ri-file-list-3-line"></i> 答题详情
+    </h3>
+    
+    {% for answer in answers %}
+    <div class="answer-card {% if answer.question.question_type == 'subjective' %}pending{% elif answer.is_correct %}correct{% else %}wrong{% endif %}">
+        <div class="answer-header">
+            <div>
+                <span class="answer-number">第{% if question_order_map|get_item:answer.question.id %}{{ question_order_map|get_item:answer.question.id }}{% else %}{{ forloop.counter }}{% endif %}题</span>
+                <span class="answer-type">{{ answer.question.get_question_type_display }}</span>
+            </div>
+            <div class="answer-meta">
+                {% if answer.question.question_type != 'subjective' %}
+                <span class="answer-status {% if answer.is_correct %}correct{% else %}wrong{% endif %}">
+                    {% if answer.is_correct %}<i class="ri-check-line"></i> 正确{% else %}<i class="ri-close-line"></i> 错误{% endif %}
+                </span>
+                {% else %}
+                <span class="answer-status pending">
+                    {% if answer.score > 0 %}已批阅{% else %}待批阅{% endif %}
+                </span>
+                {% endif %}
+                <span class="answer-score">得分：{{ answer.score }}/{{ answer.question.score }}分</span>
+            </div>
+        </div>
+        
+        <div class="question-content">{{ answer.question.content|safe }}</div>
+        
+        {% if answer.question.question_type == 'single' or answer.question.question_type == 'multiple' %}
+            {% if answer.question.options %}
+            <div class="options-list">
+                {% for key, value in answer.question.options.items %}
+                <div class="option-item">
+                    <span class="option-key">{{ key }}.</span>
+                    <span>{{ value|safe }}</span>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        {% endif %}
+        
+        <div class="answer-row">
+            <div class="answer-item">
+                <span class="answer-label">您的答案：</span>
+                <span class="answer-value {% if answer.is_correct %}correct{% else %}wrong{% endif %}">{{ answer.user_answer|default:"未作答" }}</span>
+            </div>
+            
+            {% if answer.question.question_type != 'subjective' %}
+            <div class="answer-item">
+                <span class="answer-label">正确答案：</span>
+                <span class="answer-value correct">
+                    {% if answer.question.question_type == 'judge' %}
+                        {% if answer.question.correct_answer == 'True' %}正确{% else %}错误{% endif %}
+                    {% elif answer.question.question_type == 'multiple' %}
+                        {{ answer.question.get_correct_answer_list|join:", " }}
+                    {% else %}
+                        {{ answer.question.correct_answer }}
+                    {% endif %}
+                </span>
+            </div>
+            {% endif %}
+        </div>
+        
+        {% if answer.question.explanation %}
+        <div class="explanation-box">
+            <div class="explanation-label"><i class="ri-lightbulb-line"></i> 解析</div>
+            <div class="explanation-text">{{ answer.question.explanation|linebreaks }}</div>
+        </div>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- 操作按钮 -->
+<div style="text-align: center; margin-top: 32px;">
+    <a href="{% url 'exam:exam_list_student' %}" class="btn btn-secondary">
+        <i class="ri-arrow-left-line"></i> 返回考试列表
+    </a>
+    <a href="{% url 'exam:my_scores' %}" class="btn btn-primary">
+        <i class="ri-bar-chart-line"></i> 查看所有成绩
+    </a>
+</div>
+{% endblock %}

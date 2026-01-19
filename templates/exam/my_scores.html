@@ -1,0 +1,154 @@
+{% extends 'base.html' %}
+
+{% block title %}我的成绩 - 智能学习系统{% endblock %}
+
+{% block header_nav %}
+<nav class="header-nav">
+    <a href="{% url 'accounts:home' %}" class="nav-link">
+        <i class="ri-home-4-line"></i> 首页
+    </a>
+    <a href="{% url 'exam:exam_list_student' %}" class="nav-link">
+        <i class="ri-edit-circle-line"></i> 考试
+    </a>
+    <a href="{% url 'exam:practice_home' %}" class="nav-link">
+        <i class="ri-book-open-line"></i> 练习
+    </a>
+    <a href="{% url 'exam:my_wrongs' %}" class="nav-link">
+        <i class="ri-file-warning-line"></i> 错题
+    </a>
+    <a href="{% url 'exam:my_favorites' %}" class="nav-link">
+        <i class="ri-star-line"></i> 收藏
+    </a>
+</nav>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .table-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        overflow: hidden;
+    }
+    
+    .data-table th {
+        background: rgba(255, 255, 255, 0.02);
+        padding: 16px;
+    }
+    
+    .data-table td {
+        padding: 16px;
+    }
+    
+    .score-passed {
+        color: var(--accent-green);
+        font-weight: 600;
+    }
+    
+    .score-failed {
+        color: #f87171;
+        font-weight: 600;
+    }
+    
+    .status-passed {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        color: var(--accent-green);
+    }
+    
+    .status-failed {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        color: #f87171;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">
+        <i class="ri-bar-chart-line"></i>
+        我的成绩
+    </h1>
+    <p class="page-subtitle">查看所有考试成绩记录</p>
+    <div class="page-actions">
+        <a href="{% url 'exam:exam_list_student' %}" class="btn btn-primary">
+            <i class="ri-edit-circle-line"></i> 参加考试
+        </a>
+    </div>
+</div>
+
+{% if page_obj %}
+<div class="table-card">
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>考试名称</th>
+                <th style="width: 150px;">提交时间</th>
+                <th style="width: 100px;">得分</th>
+                <th style="width: 80px;">总分</th>
+                <th style="width: 100px;">状态</th>
+                <th style="width: 100px;">操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for attempt in page_obj %}
+            <tr>
+                <td>
+                    <span style="color: var(--text-primary); font-weight: 500;">{{ attempt.exam.title }}</span>
+                </td>
+                <td>{{ attempt.submit_time|date:"m-d H:i" }}</td>
+                <td class="{% if attempt.is_passed %}score-passed{% else %}score-failed{% endif %}">
+                    {{ attempt.total_score }}分
+                </td>
+                <td>{{ attempt.exam.total_score }}分</td>
+                <td>
+                    {% if attempt.is_passed %}
+                    <span class="status-passed">
+                        <i class="ri-checkbox-circle-fill"></i> 通过
+                    </span>
+                    {% else %}
+                    <span class="status-failed">
+                        <i class="ri-close-circle-fill"></i> 未通过
+                    </span>
+                    {% endif %}
+                </td>
+                <td>
+                    <a href="{% url 'exam:exam_result' attempt.id %}" class="btn btn-secondary btn-sm">
+                        <i class="ri-eye-line"></i> 详情
+                    </a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% if page_obj.has_other_pages %}
+<div class="pagination">
+    {% if page_obj.has_previous %}
+    <a href="?page={{ page_obj.previous_page_number }}">
+        <i class="ri-arrow-left-s-line"></i> 上一页
+    </a>
+    {% endif %}
+    <span class="current">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+    {% if page_obj.has_next %}
+    <a href="?page={{ page_obj.next_page_number }}">
+        下一页 <i class="ri-arrow-right-s-line"></i>
+    </a>
+    {% endif %}
+</div>
+{% endif %}
+
+{% else %}
+<div class="empty-state">
+    <i class="ri-bar-chart-line"></i>
+    <p>暂无成绩记录</p>
+    <a href="{% url 'exam:exam_list_student' %}" class="btn btn-primary" style="margin-top: 16px;">
+        <i class="ri-edit-circle-line"></i> 去参加考试
+    </a>
+</div>
+{% endif %}
+{% endblock %}

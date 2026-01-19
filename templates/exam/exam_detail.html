@@ -1,0 +1,276 @@
+{% extends 'base.html' %}
+
+{% block title %}考试详情 - {{ exam.title }} - 智能学习系统{% endblock %}
+
+{% block header_nav %}
+<nav class="header-nav">
+    <a href="{% url 'exam:admin_dashboard' %}" class="nav-link">
+        <i class="ri-dashboard-3-line"></i> 控制台
+    </a>
+    <a href="{% url 'exam:exam_list' %}" class="nav-link active">
+        <i class="ri-calendar-check-line"></i> 考试管理
+    </a>
+    <a href="{% url 'exam:question_list' %}" class="nav-link">
+        <i class="ri-file-list-3-line"></i> 题库管理
+    </a>
+</nav>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .detail-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 32px;
+    }
+    
+    .detail-title {
+        font-size: 28px;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-bottom: 8px;
+    }
+    
+    .detail-actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+    
+    .info-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 28px;
+        margin-bottom: 24px;
+    }
+    
+    .info-section-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--accent-primary);
+        margin-bottom: 16px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .info-desc {
+        color: var(--text-secondary);
+        line-height: 1.7;
+        margin-bottom: 24px;
+        padding-bottom: 20px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 20px;
+    }
+    
+    .info-item {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+    
+    .info-label {
+        color: var(--text-muted);
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .info-value {
+        color: var(--text-primary);
+        font-size: 15px;
+        font-weight: 500;
+    }
+    
+    .tag-draft { background: rgba(148, 163, 184, 0.15); color: #94a3b8; }
+    .tag-published { background: rgba(34, 197, 94, 0.15); color: var(--accent-green); }
+    .tag-ongoing { background: rgba(56, 239, 213, 0.15); color: var(--accent-primary); }
+    .tag-finished { background: rgba(239, 68, 68, 0.15); color: #f87171; }
+    
+    .papers-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 28px;
+    }
+    
+    .papers-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+    
+    .papers-title {
+        font-size: 16px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .papers-title i {
+        color: var(--accent-primary);
+    }
+    
+    .paper-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+    
+    .paper-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 20px;
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 12px;
+        transition: all 0.3s;
+    }
+    
+    .paper-item:hover {
+        border-color: var(--border-hover);
+        background: rgba(56, 239, 213, 0.05);
+    }
+    
+    .paper-info {
+        flex: 1;
+    }
+    
+    .paper-name {
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 6px;
+    }
+    
+    .paper-meta {
+        font-size: 13px;
+        color: var(--text-muted);
+        display: flex;
+        gap: 16px;
+        flex-wrap: wrap;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="detail-header">
+    <div>
+        <h1 class="detail-title">{{ exam.title }}</h1>
+        <span class="tag tag-{{ exam.status }}">{{ exam.get_status_display }}</span>
+    </div>
+    <div class="detail-actions">
+        <a href="{% url 'exam:exam_list' %}" class="btn btn-secondary">
+            <i class="ri-arrow-left-line"></i> 返回
+        </a>
+        <a href="{% url 'exam:exam_edit' exam.id %}" class="btn btn-success">
+            <i class="ri-edit-line"></i> 编辑
+        </a>
+        <a href="{% url 'exam:exam_statistics' exam.id %}" class="btn btn-secondary">
+            <i class="ri-bar-chart-line"></i> 统计
+        </a>
+        <a href="{% url 'exam:exam_attempt_list' exam.id %}" class="btn btn-secondary">
+            <i class="ri-file-list-3-line"></i> 答卷
+        </a>
+        <a href="{% url 'exam:paper_create' exam.id %}" class="btn btn-primary">
+            <i class="ri-add-line"></i> 创建试卷
+        </a>
+    </div>
+</div>
+
+<!-- 考试信息 -->
+<div class="info-card">
+    <div class="info-section-title">
+        <i class="ri-information-line"></i> 考试信息
+    </div>
+    
+    {% if exam.description %}
+    <div class="info-desc">{{ exam.description|linebreaks }}</div>
+    {% endif %}
+    
+    <div class="info-grid">
+        <div class="info-item">
+            <span class="info-label">开始时间</span>
+            <span class="info-value">{{ exam.start_time|date:"Y-m-d H:i" }}</span>
+        </div>
+        <div class="info-item">
+            <span class="info-label">结束时间</span>
+            <span class="info-value">{{ exam.end_time|date:"Y-m-d H:i" }}</span>
+        </div>
+        <div class="info-item">
+            <span class="info-label">考试时长</span>
+            <span class="info-value">{{ exam.duration }} 分钟</span>
+        </div>
+        <div class="info-item">
+            <span class="info-label">总分</span>
+            <span class="info-value">{{ exam.total_score }} 分</span>
+        </div>
+        <div class="info-item">
+            <span class="info-label">及格分数</span>
+            <span class="info-value">{{ exam.pass_score }} 分</span>
+        </div>
+        <div class="info-item">
+            <span class="info-label">最大尝试</span>
+            <span class="info-value">{{ exam.max_attempts }} 次</span>
+        </div>
+        <div class="info-item">
+            <span class="info-label">创建者</span>
+            <span class="info-value">{{ exam.created_by.username|default:"系统" }}</span>
+        </div>
+        <div class="info-item">
+            <span class="info-label">创建时间</span>
+            <span class="info-value">{{ exam.created_at|date:"Y-m-d H:i" }}</span>
+        </div>
+    </div>
+</div>
+
+<!-- 试卷列表 -->
+<div class="papers-card">
+    <div class="papers-header">
+        <h3 class="papers-title">
+            <i class="ri-file-paper-line"></i> 试卷列表
+        </h3>
+        <a href="{% url 'exam:paper_create' exam.id %}" class="btn btn-primary btn-sm">
+            <i class="ri-add-line"></i> 创建试卷
+        </a>
+    </div>
+    
+    {% if papers %}
+    <div class="paper-list">
+        {% for paper in papers %}
+        <div class="paper-item">
+            <div class="paper-info">
+                <div class="paper-name">{{ paper.name }}</div>
+                <div class="paper-meta">
+                    <span><i class="ri-file-list-line"></i> {{ paper.get_total_questions }} 题</span>
+                    <span><i class="ri-trophy-line"></i> {{ paper.get_total_score }} 分</span>
+                    <span><i class="ri-settings-3-line"></i> {{ paper.get_generate_type_display }}</span>
+                    <span><i class="ri-time-line"></i> {{ paper.created_at|date:"m-d H:i" }}</span>
+                </div>
+            </div>
+            <a href="{% url 'exam:paper_detail' paper.id %}" class="btn btn-secondary btn-sm">
+                <i class="ri-eye-line"></i> 查看
+            </a>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <i class="ri-file-paper-line"></i>
+        <p>该考试还没有试卷</p>
+        <a href="{% url 'exam:paper_create' exam.id %}" class="btn btn-primary" style="margin-top: 16px;">
+            <i class="ri-add-line"></i> 创建试卷
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,243 @@
+{% extends 'base.html' %}
+
+{% block title %}开始考试 - {{ exam.title }} - 智能学习系统{% endblock %}
+
+{% block header_nav %}
+<nav class="header-nav">
+    <a href="{% url 'accounts:home' %}" class="nav-link">
+        <i class="ri-home-4-line"></i> 首页
+    </a>
+    <a href="{% url 'exam:exam_list_student' %}" class="nav-link active">
+        <i class="ri-edit-circle-line"></i> 考试
+    </a>
+    <a href="{% url 'exam:my_scores' %}" class="nav-link">
+        <i class="ri-bar-chart-line"></i> 成绩
+    </a>
+</nav>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .start-container {
+        max-width: 700px;
+        margin: 0 auto;
+    }
+    
+    .exam-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 20px;
+        padding: 48px;
+        text-align: center;
+    }
+    
+    .exam-icon {
+        width: 80px;
+        height: 80px;
+        background: linear-gradient(135deg, var(--accent-primary), var(--accent-blue));
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 24px;
+        font-size: 36px;
+        color: var(--bg-dark);
+    }
+    
+    .exam-title {
+        font-size: 28px;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-bottom: 12px;
+    }
+    
+    .exam-desc {
+        color: var(--text-muted);
+        line-height: 1.7;
+        margin-bottom: 32px;
+    }
+    
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 16px;
+        margin-bottom: 32px;
+        text-align: left;
+    }
+    
+    @media (max-width: 500px) {
+        .info-grid { grid-template-columns: 1fr; }
+    }
+    
+    .info-item {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 12px;
+        padding: 16px 20px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    
+    .info-icon {
+        width: 40px;
+        height: 40px;
+        background: rgba(56, 239, 213, 0.15);
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--accent-primary);
+        font-size: 18px;
+        flex-shrink: 0;
+    }
+    
+    .info-content {
+        flex: 1;
+    }
+    
+    .info-label {
+        font-size: 12px;
+        color: var(--text-muted);
+        margin-bottom: 2px;
+    }
+    
+    .info-value {
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+    
+    .warning-box {
+        background: rgba(251, 191, 36, 0.1);
+        border: 1px solid rgba(251, 191, 36, 0.3);
+        border-radius: 14px;
+        padding: 20px 24px;
+        margin-bottom: 32px;
+        text-align: left;
+    }
+    
+    .warning-title {
+        color: var(--accent-yellow);
+        font-weight: 600;
+        margin-bottom: 12px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .warning-list {
+        margin: 0;
+        padding-left: 20px;
+        color: var(--text-secondary);
+        line-height: 1.8;
+    }
+    
+    .warning-list li {
+        margin-bottom: 4px;
+    }
+    
+    .action-buttons {
+        display: flex;
+        gap: 16px;
+        justify-content: center;
+    }
+    
+    .action-buttons .btn {
+        min-width: 140px;
+        padding: 14px 32px;
+        font-size: 16px;
+    }
+    
+    .btn-start {
+        background: linear-gradient(135deg, var(--accent-primary), var(--accent-blue));
+        color: var(--bg-dark);
+        font-weight: 700;
+    }
+    
+    .btn-start:hover {
+        box-shadow: 0 0 25px rgba(56, 239, 213, 0.4);
+        transform: translateY(-2px);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="start-container">
+    <div class="exam-card">
+        <div class="exam-icon">
+            <i class="ri-file-text-line"></i>
+        </div>
+        
+        <h1 class="exam-title">{{ exam.title }}</h1>
+        
+        {% if exam.description %}
+        <p class="exam-desc">{{ exam.description }}</p>
+        {% endif %}
+        
+        <div class="info-grid">
+            <div class="info-item">
+                <div class="info-icon"><i class="ri-time-line"></i></div>
+                <div class="info-content">
+                    <div class="info-label">考试时长</div>
+                    <div class="info-value">{{ exam.duration }} 分钟</div>
+                </div>
+            </div>
+            <div class="info-item">
+                <div class="info-icon"><i class="ri-trophy-line"></i></div>
+                <div class="info-content">
+                    <div class="info-label">满分 / 及格</div>
+                    <div class="info-value">{{ exam.total_score }} / {{ exam.pass_score }} 分</div>
+                </div>
+            </div>
+            <div class="info-item">
+                <div class="info-icon"><i class="ri-file-list-3-line"></i></div>
+                <div class="info-content">
+                    <div class="info-label">题目数量</div>
+                    <div class="info-value">{{ paper.get_total_questions }} 题</div>
+                </div>
+            </div>
+            {% if attempts_count > 0 %}
+            <div class="info-item">
+                <div class="info-icon"><i class="ri-restart-line"></i></div>
+                <div class="info-content">
+                    <div class="info-label">已尝试</div>
+                    <div class="info-value">{{ attempts_count }} / {{ exam.max_attempts }} 次</div>
+                </div>
+            </div>
+            {% else %}
+            <div class="info-item">
+                <div class="info-icon"><i class="ri-checkbox-circle-line"></i></div>
+                <div class="info-content">
+                    <div class="info-label">可尝试次数</div>
+                    <div class="info-value">{{ exam.max_attempts }} 次</div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        
+        <div class="warning-box">
+            <div class="warning-title">
+                <i class="ri-error-warning-line"></i> 注意事项
+            </div>
+            <ul class="warning-list">
+                <li>考试开始后，系统将开始计时</li>
+                <li>答题过程中答案会自动保存</li>
+                <li>考试时间结束后，系统将自动提交</li>
+                <li>提交后将无法修改答案</li>
+                <li>请勿切换窗口或最小化浏览器</li>
+            </ul>
+        </div>
+        
+        <form method="post" class="action-buttons">
+            {% csrf_token %}
+            <a href="{% url 'exam:exam_list_student' %}" class="btn btn-secondary">
+                <i class="ri-arrow-left-line"></i> 返回
+            </a>
+            <button type="submit" class="btn btn-start">
+                <i class="ri-play-fill"></i> 开始考试
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}

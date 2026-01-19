@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>正在答题 - {{ exam.title }} - 智能学习系统</title>
+    {% load exam_tags %}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css">
+    <style>
+        :root {
+            --bg-dark: #0a0e17;
+            --bg-card: rgba(17, 25, 40, 0.85);
+            --bg-secondary: #111827;
+            --border-color: rgba(56, 239, 213, 0.15);
+            --border-hover: rgba(56, 239, 213, 0.4);
+            --text-primary: #e0e6f1;
+            --text-secondary: #a0a8b8;
+            --text-muted: #6b7280;
+            --accent-primary: #38efd5;
+            --accent-blue: #00bbf9;
+            --accent-green: #22c55e;
+            --accent-yellow: #fbbf24;
+            --accent-purple: #9b5de5;
+        }
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Microsoft YaHei', Arial, sans-serif; 
+            background: var(--bg-dark); 
+            color: var(--text-primary);
+            overflow-x: hidden; 
+        }
+        
+        /* 背景 */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image:
+                linear-gradient(to right, rgba(56, 239, 213, 0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(56, 239, 213, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+            z-index: -1;
+        }
+        
+        /* 左侧导航栏 */
+        .sidebar { 
+            position: fixed; left: 0; top: 0; width: 280px; height: 100vh; 
+            background: var(--bg-card); 
+            border-right: 1px solid var(--border-color);
+            z-index: 1000; overflow-y: auto;
+            backdrop-filter: blur(10px);
+        }
+        .sidebar-header { padding: 24px; border-bottom: 1px solid var(--border-color); }
+        .timer-container { text-align: center; }
+        .timer-label { font-size: 13px; color: var(--text-muted); margin-bottom: 10px; }
+        .timer { 
+            font-size: 36px; font-weight: 700; 
+            color: var(--accent-primary);
+            text-shadow: 0 0 20px rgba(56, 239, 213, 0.5);
+        }
+        .timer.warning { color: var(--accent-yellow); text-shadow: 0 0 20px rgba(251, 191, 36, 0.5); }
+        .timer.danger { color: #f87171; animation: blink 1s infinite; text-shadow: 0 0 20px rgba(248, 113, 113, 0.5); }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        
+        .question-nav { padding: 20px; }
+        .nav-title { 
+            font-size: 14px; font-weight: 600; color: var(--text-secondary); 
+            margin-bottom: 20px; padding-bottom: 12px; 
+            border-bottom: 1px solid var(--border-color);
+        }
+        .question-type-group { margin-bottom: 24px; }
+        .type-header { 
+            display: flex; align-items: center; gap: 10px; 
+            margin-bottom: 12px; padding: 10px 14px; 
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 10px; 
+            font-size: 13px; font-weight: 600; 
+            border-left: 3px solid var(--accent-primary);
+        }
+        .type-header.single { border-left-color: var(--accent-blue); }
+        .type-header.multiple { border-left-color: var(--accent-yellow); }
+        .type-header.judge { border-left-color: var(--accent-green); }
+        .type-icon { font-size: 16px; }
+        .type-name { flex: 1; color: var(--text-secondary); }
+        .type-count { 
+            background: var(--accent-primary); color: var(--bg-dark); 
+            padding: 2px 10px; border-radius: 10px; 
+            font-size: 11px; font-weight: 700;
+        }
+        .type-count.single { background: var(--accent-blue); }
+        .type-count.multiple { background: var(--accent-yellow); }
+        .type-count.judge { background: var(--accent-green); }
+        
+        .question-list { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+        .question-nav-item { 
+            width: 40px; height: 40px; 
+            display: flex; align-items: center; justify-content: center; 
+            border: 2px solid rgba(255, 255, 255, 0.1); 
+            border-radius: 8px; 
+            cursor: pointer; font-weight: 600; font-size: 13px;
+            transition: all 0.3s;
+            background: rgba(255, 255, 255, 0.02);
+            color: var(--text-secondary);
+        }
+        .question-nav-item:hover { border-color: var(--accent-primary); background: rgba(56, 239, 213, 0.1); }
+        .question-nav-item.answered { background: var(--accent-blue); border-color: var(--accent-blue); color: white; }
+        .question-nav-item.current { background: var(--accent-green); border-color: var(--accent-green); color: white; }
+        .question-nav-item.unanswered { background: rgba(255, 255, 255, 0.02); border-color: rgba(255, 255, 255, 0.1); }
+        .question-nav-item.unanswered.highlight { background: #f87171; border-color: #ef4444; color: white; animation: pulse 1s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+        
+        /* 主内容区 */
+        .main-content { margin-left: 280px; min-height: 100vh; }
+        
+        /* 顶部信息栏 */
+        .user-info-bar { 
+            background: var(--bg-card); 
+            border-bottom: 1px solid var(--border-color);
+            padding: 16px 30px; 
+            position: sticky; top: 0; z-index: 100;
+            backdrop-filter: blur(10px);
+        }
+        .user-info-content { max-width: 1200px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; }
+        .exam-title { font-size: 18px; font-weight: 600; color: var(--accent-primary); }
+        .user-info { display: flex; gap: 24px; font-size: 13px; flex-wrap: wrap; }
+        .user-info-item { display: flex; align-items: center; gap: 6px; }
+        .user-info-label { color: var(--text-muted); }
+        .user-info-value { color: var(--text-secondary); font-weight: 500; }
+        
+        /* 题目显示区 */
+        .question-container { max-width: 900px; margin: 0 auto; padding: 30px; padding-bottom: 120px; }
+        .question-card { 
+            background: var(--bg-card); 
+            border: 1px solid var(--border-color);
+            border-radius: 16px; 
+            padding: 32px; 
+            margin-bottom: 24px;
+            display: none;
+            backdrop-filter: blur(10px);
+        }
+        .question-card.active { display: block; }
+        .question-header { 
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 24px; padding-bottom: 20px; 
+            border-bottom: 1px solid var(--border-color);
+        }
+        .question-number { font-size: 20px; font-weight: 700; color: var(--accent-primary); }
+        .question-score { 
+            background: rgba(34, 197, 94, 0.15);
+            color: var(--accent-green); 
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-weight: 600; font-size: 14px;
+            margin-left: 12px;
+        }
+        .question-type { font-size: 12px; color: var(--text-muted); }
+        .question-content {
+            font-size: 17px;
+            line-height: 1.9;
+            margin-bottom: 24px;
+            color: var(--text-primary);
+            font-weight: 500;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .question-image {
+            max-width: 450px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            margin-bottom: 24px;
+        }
+        
+        /* 选项 */
+        .options-list { margin-left: 8px; }
+        .option-item { 
+            padding: 16px 20px; margin-bottom: 12px; 
+            border: 2px solid rgba(255, 255, 255, 0.08); 
+            border-radius: 12px; 
+            cursor: pointer; 
+            transition: all 0.3s;
+            background: rgba(255, 255, 255, 0.02);
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+        .option-item:hover { 
+            border-color: rgba(56, 239, 213, 0.3); 
+            background: rgba(56, 239, 213, 0.05);
+        }
+        .option-item.selected { 
+            border-color: var(--accent-primary); 
+            background: rgba(56, 239, 213, 0.1);
+        }
+        input[type="radio"], input[type="checkbox"] { 
+            width: 20px; height: 20px;
+            margin-top: 2px;
+            cursor: pointer; 
+            accent-color: var(--accent-primary);
+            flex-shrink: 0;
+        }
+        label {
+            cursor: pointer;
+            font-size: 15px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            flex: 1;
+        }
+        label strong {
+            color: var(--accent-primary);
+            margin-right: 6px;
+        }
+        
+        /* 主观题 */
+        .subjective-textarea {
+            width: 100%;
+            min-height: 180px;
+            padding: 16px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 2px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            color: var(--text-primary);
+            font-size: 15px;
+            line-height: 1.7;
+            resize: vertical;
+            transition: all 0.3s;
+        }
+        .subjective-textarea:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+            background: rgba(255, 255, 255, 0.05);
+        }
+        
+        /* 底部操作栏 */
+        .actions { 
+            position: fixed; bottom: 0; left: 280px; right: 0; 
+            background: var(--bg-card);
+            border-top: 1px solid var(--border-color);
+            padding: 16px 30px; 
+            z-index: 100;
+            backdrop-filter: blur(10px);
+        }
+        .actions-content { max-width: 1200px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; }
+        .btn { 
+            padding: 10px 24px; border: none; border-radius: 10px; 
+            cursor: pointer; font-size: 14px; font-weight: 600; 
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .btn-primary { 
+            background: rgba(56, 239, 213, 0.15);
+            border: 1px solid rgba(56, 239, 213, 0.3);
+            color: var(--accent-primary); 
+        }
+        .btn-primary:hover { background: rgba(56, 239, 213, 0.25); }
+        .btn-success { 
+            background: rgba(34, 197, 94, 0.15);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            color: var(--accent-green); 
+        }
+        .btn-success:hover { background: rgba(34, 197, 94, 0.25); }
+        .btn-danger { 
+            background: linear-gradient(135deg, #f87171, #ef4444);
+            color: white;
+            border: none;
+        }
+        .btn-danger:hover { box-shadow: 0 0 20px rgba(239, 68, 68, 0.4); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .question-nav-controls { display: flex; gap: 10px; }
+        
+        /* 警告消息 */
+        .warning-message {
+            position: fixed;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(251, 191, 36, 0.15);
+            color: var(--accent-yellow);
+            border: 2px solid rgba(251, 191, 36, 0.4);
+            padding: 16px 28px;
+            border-radius: 12px;
+            z-index: 2000;
+            font-weight: 600;
+            font-size: 14px;
+            display: none;
+            backdrop-filter: blur(10px);
+        }
+        .warning-message.show { display: block; animation: slideDown 0.3s ease-out; }
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateX(-50%) translateY(-20px); }
+            to { opacity: 1; transform: translateX(-50%) translateY(0); }
+        }
+        
+        /* 错误提示 */
+        .error-box {
+            color: #f87171;
+            padding: 16px;
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 10px;
+            margin-top: 16px;
+        }
+    </style>
+</head>
+<body>
+    <!-- 左侧导航栏 -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <div class="timer-container">
+                <div class="timer-label"><i class="ri-time-line"></i> 剩余时间</div>
+                <div class="timer" id="timer">00:00:00</div>
+            </div>
+        </div>
+        <div class="question-nav">
+            <div class="nav-title"><i class="ri-list-check-2"></i> 题目导航</div>
+            
+            {% if questions_by_type.single %}
+            <div class="question-type-group">
+                <div class="type-header single">
+                    <span class="type-icon"><i class="ri-radio-button-line"></i></span>
+                    <span class="type-name">单选题</span>
+                    <span class="type-count single">{{ questions_by_type.single|length }}</span>
+                </div>
+                <div class="question-list">
+                    {% for item in questions_by_type.single %}
+                    <div class="question-nav-item" data-question-index="{{ item.index }}" data-question-id="{{ item.question_id }}" onclick="scrollToQuestion({{ item.index }})" title="第{{ item.order }}题">
+                        {{ item.order }}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+            
+            {% if questions_by_type.multiple %}
+            <div class="question-type-group">
+                <div class="type-header multiple">
+                    <span class="type-icon"><i class="ri-checkbox-multiple-line"></i></span>
+                    <span class="type-name">多选题</span>
+                    <span class="type-count multiple">{{ questions_by_type.multiple|length }}</span>
+                </div>
+                <div class="question-list">
+                    {% for item in questions_by_type.multiple %}
+                    <div class="question-nav-item" data-question-index="{{ item.index }}" data-question-id="{{ item.question_id }}" onclick="scrollToQuestion({{ item.index }})" title="第{{ item.order }}题">
+                        {{ item.order }}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+            
+            {% if questions_by_type.judge %}
+            <div class="question-type-group">
+                <div class="type-header judge">
+                    <span class="type-icon"><i class="ri-checkbox-circle-line"></i></span>
+                    <span class="type-name">判断题</span>
+                    <span class="type-count judge">{{ questions_by_type.judge|length }}</span>
+                </div>
+                <div class="question-list">
+                    {% for item in questions_by_type.judge %}
+                    <div class="question-nav-item" data-question-index="{{ item.index }}" data-question-id="{{ item.question_id }}" onclick="scrollToQuestion({{ item.index }})" title="第{{ item.order }}题">
+                        {{ item.order }}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div id="warningMessage" class="warning-message"></div>
+    
+    <!-- 主内容区 -->
+    <div class="main-content">
+        <div class="user-info-bar">
+            <div class="user-info-content">
+                <div class="exam-title"><i class="ri-file-text-line"></i> {{ exam.title }}</div>
+                <div class="user-info">
+                    <div class="user-info-item">
+                        <span class="user-info-label">学号：</span>
+                        <span class="user-info-value">{{ user_profile.student_id|default:"未设置" }}</span>
+                    </div>
+                    <div class="user-info-item">
+                        <span class="user-info-label">姓名：</span>
+                        <span class="user-info-value">{{ user.first_name|default:user.username }}</span>
+                    </div>
+                    <div class="user-info-item">
+                        <span class="user-info-label">专业：</span>
+                        <span class="user-info-value">{{ user_profile.major|default:"未设置" }}</span>
+                    </div>
+                    <div class="user-info-item">
+                        <span class="user-info-label">班级：</span>
+                        <span class="user-info-value">{{ user_profile.class_name|default:"未设置" }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="question-container">
+            <form method="post" id="examForm">
+                {% csrf_token %}
+                
+                {% for pq in paper_questions %}
+                <div class="question-card" id="question_{{ forloop.counter0 }}" data-question-id="{{ pq.question.id }}">
+                    <div class="question-header">
+                        <div>
+                            <span class="question-number">第{% if pq.order > 0 %}{{ pq.order }}{% else %}{{ forloop.counter }}{% endif %}题</span>
+                            <span class="question-score">{{ pq.score }}分</span>
+                        </div>
+                        <div class="question-type">
+                            {{ pq.question.get_question_type_display }} · {{ pq.question.get_difficulty_display }}
+                        </div>
+                    </div>
+                    
+                    <div class="question-content">{{ pq.question.content|safe }}</div>
+                    
+                    {% if pq.question.image %}
+                    <img src="{{ pq.question.image.url }}" alt="题目图片" class="question-image">
+                    {% endif %}
+                    
+                    {% if pq.question.question_type == 'judge' %}
+                    <div class="options-list">
+                        <div class="option-item" onclick="selectJudge(this, '{{ pq.question.id }}', 'True')">
+                            <input type="radio" name="answer_{{ pq.question.id }}" value="True" id="judge_{{ pq.question.id }}_true" 
+                                   {% if pq.question.id in saved_answers and saved_answers|get_item:pq.question.id == 'True' %}checked{% endif %}>
+                            <label for="judge_{{ pq.question.id }}_true"><strong>A.</strong> 正确</label>
+                        </div>
+                        <div class="option-item" onclick="selectJudge(this, '{{ pq.question.id }}', 'False')">
+                            <input type="radio" name="answer_{{ pq.question.id }}" value="False" id="judge_{{ pq.question.id }}_false"
+                                   {% if pq.question.id in saved_answers and saved_answers|get_item:pq.question.id == 'False' %}checked{% endif %}>
+                            <label for="judge_{{ pq.question.id }}_false"><strong>B.</strong> 错误</label>
+                        </div>
+                    </div>
+                    {% elif pq.question.question_type == 'multiple' %}
+                        {% if pq.question.options %}
+                        <div class="options-list">
+                            {% for key, value in pq.question.options.items %}
+                            <div class="option-item" onclick="selectMultiple(this, '{{ pq.question.id }}', '{{ key }}')">
+                                {% with saved_answer=saved_answers|get_item:pq.question.id %}
+                                <input type="checkbox" name="answer_{{ pq.question.id }}" value="{{ key }}" id="multi_{{ pq.question.id }}_{{ key }}" data-saved="{{ saved_answer }}">
+                                {% endwith %}
+                                <label for="multi_{{ pq.question.id }}_{{ key }}"><strong>{{ key }}.</strong> {{ value|safe }}</label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <div class="error-box"><i class="ri-error-warning-line"></i> 该题目没有选项数据，请联系管理员</div>
+                        {% endif %}
+                    {% elif pq.question.question_type == 'subjective' %}
+                        <div style="margin-top: 16px;">
+                            <label style="font-weight: 600; color: var(--text-secondary); margin-bottom: 12px; display: block;">请在下方作答：</label>
+                            <textarea name="answer_{{ pq.question.id }}" class="subjective-textarea" placeholder="请输入您的答案...">{% if pq.question.id in saved_answers %}{{ saved_answers|get_item:pq.question.id }}{% endif %}</textarea>
+                        </div>
+                    {% else %}
+                        {% if pq.question.options %}
+                        <div class="options-list">
+                            {% for key, value in pq.question.options.items %}
+                            <div class="option-item" onclick="selectSingle(this, '{{ pq.question.id }}', '{{ key }}')">
+                                <input type="radio" name="answer_{{ pq.question.id }}" value="{{ key }}" id="single_{{ pq.question.id }}_{{ key }}"
+                                       {% if pq.question.id in saved_answers and saved_answers|get_item:pq.question.id == key %}checked{% endif %}>
+                                <label for="single_{{ pq.question.id }}_{{ key }}"><strong>{{ key }}.</strong> {{ value|safe }}</label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <div class="error-box"><i class="ri-error-warning-line"></i> 该题目没有选项数据，请联系管理员</div>
+                        {% endif %}
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </form>
+        </div>
+        
+        <div class="actions">
+            <div class="actions-content">
+                <div class="question-nav-controls">
+                    <button type="button" class="btn btn-primary" onclick="previousQuestion()">
+                        <i class="ri-arrow-left-line"></i> 上一题
+                    </button>
+                    <button type="button" class="btn btn-primary" onclick="nextQuestion()">
+                        下一题 <i class="ri-arrow-right-line"></i>
+                    </button>
+                </div>
+                <div style="display: flex; gap: 12px;">
+                    <button type="button" class="btn btn-success" onclick="autoSave()">
+                        <i class="ri-save-line"></i> 保存答案
+                    </button>
+                    <button type="button" class="btn btn-danger" onclick="confirmSubmit()">
+                        <i class="ri-send-plane-fill"></i> 提交试卷
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let remainingTime = {{ remaining_time }};
+        let timerInterval;
+        let currentQuestionIndex = 0;
+        const totalQuestions = {{ paper_questions|length }};
+        const attemptId = {{ attempt.id }};
+        const logEventUrl = "{% url 'exam:log_exam_event' attempt.id %}";
+        
+        function initQuestions() {
+            document.querySelectorAll('.question-card').forEach((card, index) => {
+                card.classList.toggle('active', index === 0);
+            });
+            updateQuestionNav();
+        }
+        
+        function updateQuestionNav() {
+            const questionCards = document.querySelectorAll('.question-card');
+            document.querySelectorAll('.question-nav-item').forEach((navItem) => {
+                navItem.classList.remove('current', 'answered', 'unanswered', 'highlight');
+                const navIndex = parseInt(navItem.getAttribute('data-question-index'));
+                if (navIndex < questionCards.length) {
+                    const questionCard = questionCards[navIndex];
+                    const questionId = questionCard.getAttribute('data-question-id');
+                    const hasAnswer = checkQuestionAnswered(questionId);
+                    if (navIndex === currentQuestionIndex) {
+                        navItem.classList.add('current');
+                        if (hasAnswer) navItem.classList.add('answered');
+                    } else {
+                        navItem.classList.add(hasAnswer ? 'answered' : 'unanswered');
+                    }
+                }
+            });
+        }
+        
+        function checkQuestionAnswered(questionId) {
+            const questionCard = document.querySelector(`.question-card[data-question-id="${questionId}"]`);
+            if (!questionCard) return false;
+            const radio = questionCard.querySelector('input[type="radio"]:checked');
+            if (radio) return true;
+            const checkboxes = questionCard.querySelectorAll('input[type="checkbox"]:checked');
+            if (checkboxes.length > 0) return true;
+            const textarea = questionCard.querySelector('textarea[name^="answer_"]');
+            if (textarea && textarea.value.trim() !== '') return true;
+            return false;
+        }
+        
+        function scrollToQuestion(index) {
+            if (index < 0 || index >= totalQuestions) return;
+            currentQuestionIndex = index;
+            document.querySelectorAll('.question-card').forEach((card, i) => {
+                card.classList.toggle('active', i === index);
+                if (i === index) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            });
+            updateQuestionNav();
+        }
+        
+        function previousQuestion() { if (currentQuestionIndex > 0) scrollToQuestion(currentQuestionIndex - 1); }
+        function nextQuestion() { if (currentQuestionIndex < totalQuestions - 1) scrollToQuestion(currentQuestionIndex + 1); }
+        
+        function updateTimer() {
+            const hours = Math.floor(remainingTime / 3600);
+            const minutes = Math.floor((remainingTime % 3600) / 60);
+            const seconds = remainingTime % 60;
+            const timerEl = document.getElementById('timer');
+            timerEl.textContent = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            timerEl.classList.remove('warning', 'danger');
+            if (remainingTime <= 300) timerEl.classList.add('danger');
+            else if (remainingTime <= 600) timerEl.classList.add('warning');
+            if (remainingTime <= 0) { clearInterval(timerInterval); alert('考试时间已到，系统将自动提交'); submitExam(); }
+            remainingTime--;
+        }
+
+        function logExamEvent(eventType, detail = '') {
+            fetch(logEventUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value },
+                body: JSON.stringify({ event_type: eventType, detail: detail }),
+            }).then(r => r.json()).then(data => {
+                if (data.force_submit) {
+                    alert(data.message || '由于多次可疑操作，本次考试已被系统强制结束。');
+                    window.location.href = "{% url 'exam:exam_result' attempt.id %}";
+                } else if (typeof data.left_count !== 'undefined' && data.left_count <= 2 && data.left_count >= 0) {
+                    showWarningMessage(`⚠️ 警告：检测到切屏/最小化行为，剩余容忍次数：${data.left_count}次`);
+                }
+            }).catch(() => {});
+        }
+        
+        function selectSingle(element, questionId, value) {
+            element.querySelector('input[type="radio"]').checked = true;
+            element.parentElement.querySelectorAll('.option-item').forEach(item => item.classList.remove('selected'));
+            element.classList.add('selected');
+            updateQuestionNav(); autoSave();
+        }
+        
+        function selectMultiple(element, questionId, value) {
+            const checkbox = element.querySelector('input[type="checkbox"]');
+            checkbox.checked = !checkbox.checked;
+            element.classList.toggle('selected', checkbox.checked);
+            updateQuestionNav(); autoSave();
+        }
+        
+        function selectJudge(element, questionId, value) {
+            element.querySelector('input[type="radio"]').checked = true;
+            element.parentElement.querySelectorAll('.option-item').forEach(item => item.classList.remove('selected'));
+            element.classList.add('selected');
+            updateQuestionNav(); autoSave();
+        }
+        
+        function autoSave() {
+            const form = document.getElementById('examForm');
+            const formData = new FormData(form);
+            formData.append('auto_save', 'true');
+            fetch(window.location.href, { method: 'POST', body: formData, headers: { 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value } })
+                .then(() => updateQuestionNav());
+        }
+        
+        function getUnansweredQuestions() {
+            const unanswered = [];
+            document.querySelectorAll('.question-card').forEach((card, index) => {
+                if (!checkQuestionAnswered(card.getAttribute('data-question-id'))) unanswered.push(index + 1);
+            });
+            return unanswered;
+        }
+        
+        function highlightUnansweredQuestions() {
+            const questionCards = document.querySelectorAll('.question-card');
+            document.querySelectorAll('.question-nav-item').forEach((navItem) => {
+                const navIndex = parseInt(navItem.getAttribute('data-question-index'));
+                if (navIndex < questionCards.length && !checkQuestionAnswered(questionCards[navIndex].getAttribute('data-question-id'))) {
+                    navItem.classList.add('highlight');
+                }
+            });
+        }
+        
+        function confirmSubmit() {
+            const unanswered = getUnansweredQuestions();
+            if (unanswered.length > 0) {
+                highlightUnansweredQuestions();
+                if (confirm(`还有 ${unanswered.length} 道题目未完成（题号：${unanswered.join(', ')}）\n\n确认要交卷吗？`)) submitExam();
+                else updateQuestionNav();
+            } else {
+                if (confirm('确定要提交试卷吗？提交后将无法修改答案。')) submitExam();
+            }
+        }
+        
+        function submitExam() {
+            const form = document.getElementById('examForm');
+            const formData = new FormData(form);
+            formData.append('submit', 'true');
+            fetch(window.location.href, { method: 'POST', body: formData, headers: { 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value } })
+                .then(() => { window.location.href = '{% url "exam:exam_result" attempt.id %}'; });
+        }
+        
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'ArrowLeft' && !e.ctrlKey && !e.metaKey) { e.preventDefault(); previousQuestion(); }
+            else if (e.key === 'ArrowRight' && !e.ctrlKey && !e.metaKey) { e.preventDefault(); nextQuestion(); }
+        });
+        
+        window.addEventListener('beforeunload', function(e) { if (remainingTime > 0) { e.preventDefault(); e.returnValue = '您正在答题，确定要离开吗？'; } });
+
+        let lastVisibilityState = document.visibilityState;
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden && lastVisibilityState === 'visible') logExamEvent('visibility_hidden', 'document.hidden = true');
+            else if (!document.hidden && lastVisibilityState === 'hidden') logExamEvent('visibility_visible', 'document.hidden = false');
+            lastVisibilityState = document.visibilityState;
+        });
+
+        let lastFocusTime = Date.now();
+        window.addEventListener('blur', function() { if (Date.now() - lastFocusTime > 500) { logExamEvent('window_blur', 'window blur'); lastFocusTime = Date.now(); } });
+        window.addEventListener('focus', function() { logExamEvent('window_focus', 'window focus'); });
+        document.addEventListener('mouseleave', function(e) { if (e.clientY <= 0) logExamEvent('window_blur', 'mouse leave window'); });
+        setInterval(function() { if (remainingTime > 0) logExamEvent('heartbeat', 'periodic heartbeat'); }, 30000);
+        
+        function showWarningMessage(message) {
+            const warningEl = document.getElementById('warningMessage');
+            if (warningEl) { warningEl.textContent = message; warningEl.classList.add('show'); setTimeout(() => warningEl.classList.remove('show'), 5000); }
+        }
+        
+        initQuestions();
+        timerInterval = setInterval(updateTimer, 1000);
+        updateTimer();
+        
+        document.querySelectorAll('input[type="radio"]:checked').forEach(input => input.closest('.option-item')?.classList.add('selected'));
+        document.querySelectorAll('input[type="checkbox"][data-saved]').forEach(checkbox => {
+            const savedAnswer = checkbox.getAttribute('data-saved');
+            if (savedAnswer && savedAnswer.includes(checkbox.value)) { checkbox.checked = true; checkbox.closest('.option-item')?.classList.add('selected'); }
+        });
+        setTimeout(updateQuestionNav, 500);
+        setInterval(updateQuestionNav, 5000);
+    </script>
+</body>
+</html>

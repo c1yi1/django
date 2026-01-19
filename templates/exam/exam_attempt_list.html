@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>答卷列表 - {{ exam.title }} - 在线考试平台</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Microsoft YaHei', Arial, sans-serif; background: #f5f5f5; }
+        .header { background: white; padding: 15px 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .header-content { max-width: 1200px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; }
+        .btn { padding: 8px 20px; border: none; border-radius: 5px; cursor: pointer; text-decoration: none; display: inline-block; font-size: 14px; }
+        .btn-secondary { background: #6c757d; color: white; }
+        .btn-primary { background: #667eea; color: white; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 0 20px 40px; }
+        table { width: 100%; background: white; border-collapse: collapse; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        thead { background: #f8f9fa; }
+        th { padding: 12px; text-align: left; font-weight: 600; }
+        td { padding: 12px; border-top: 1px solid #eee; }
+        tr:hover { background: #f8f9fa; }
+        .status-badge { padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+        .status-in_progress { background: #d1ecf1; color: #0c5460; }
+        .status-submitted { background: #d4edda; color: #155724; }
+        .status-timeout { background: #f8d7da; color: #721c24; }
+        .grade-info { font-size: 12px; color: #666; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <div><strong>答卷列表 - {{ exam.title }}</strong></div>
+            <div>
+                <a href="{% url 'exam:exam_detail' exam.id %}" class="btn btn-secondary">返回考试详情</a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="container">
+        {% if attempts %}
+        <table>
+            <thead>
+                <tr>
+                    <th>考生</th>
+                    <th>开始时间</th>
+                    <th>提交时间</th>
+                    <th>得分</th>
+                    <th>状态</th>
+                    <th>主观题批阅</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for attempt in attempts %}
+                {% with info=grading_info|default:{} %}
+                {% with g=info|get_item:attempt.id %}
+                <tr>
+                    <td>{{ attempt.user.username }}</td>
+                    <td>{{ attempt.start_time|date:"Y-m-d H:i" }}</td>
+                    <td>{{ attempt.submit_time|date:"Y-m-d H:i"|default:"未提交" }}</td>
+                    <td>{{ attempt.total_score }} / {{ exam.total_score }} 分</td>
+                    <td>
+                        <span class="status-badge status-{{ attempt.status }}">{{ attempt.get_status_display }}</span>
+                    </td>
+                    <td>
+                        {% if g %}
+                            {% if g.total_subjective == 0 %}
+                                <span class="grade-info">无主观题</span>
+                            {% else %}
+                                <span class="grade-info">
+                                    主观题 {{ g.graded_subjective }}/{{ g.total_subjective }} 已批阅
+                                </span>
+                            {% endif %}
+                        {% else %}
+                            <span class="grade-info">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="{% url 'exam:attempt_review' attempt.id %}" class="btn btn-primary">批阅 / 查看</a>
+                    </td>
+                </tr>
+                {% endwith %}
+                {% endwith %}
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div style="text-align: center; padding: 60px 20px; color: #999;">
+            <div style="font-size: 64px; margin-bottom: 20px;">📝</div>
+            <p>暂时没有学生答卷</p>
+        </div>
+        {% endif %}
+    </div>
+</body>
+</html>
+
+
+
+
+

@@ -1,0 +1,278 @@
+{% extends 'base.html' %}
+
+{% block title %}错题详情 - 智能学习系统{% endblock %}
+
+{% block header_nav %}
+<nav class="header-nav">
+    <a href="{% url 'accounts:home' %}" class="nav-link">
+        <i class="ri-home-4-line"></i> 首页
+    </a>
+    <a href="{% url 'exam:practice_home' %}" class="nav-link">
+        <i class="ri-book-open-line"></i> 练习
+    </a>
+    <a href="{% url 'exam:my_wrongs' %}" class="nav-link active">
+        <i class="ri-file-warning-line"></i> 错题
+    </a>
+    <a href="{% url 'exam:my_favorites' %}" class="nav-link">
+        <i class="ri-star-line"></i> 收藏
+    </a>
+</nav>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .detail-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 32px;
+    }
+    
+    .detail-section {
+        padding: 20px 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    
+    .detail-section:last-child {
+        border-bottom: none;
+    }
+    
+    .detail-section:first-child {
+        padding-top: 0;
+    }
+    
+    .detail-label {
+        color: var(--text-muted);
+        font-size: 13px;
+        margin-bottom: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .question-title {
+        font-size: 20px;
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+    
+    .question-content {
+        color: var(--text-secondary);
+        line-height: 1.7;
+    }
+    
+    .question-image {
+        max-width: 400px;
+        border-radius: 12px;
+        border: 1px solid var(--border-color);
+    }
+    
+    .info-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+    
+    .options-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .option-item {
+        padding: 14px 16px;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 10px;
+    }
+    
+    .option-key {
+        color: var(--accent-primary);
+        font-weight: 600;
+        margin-right: 8px;
+    }
+    
+    .answer-row {
+        display: flex;
+        gap: 24px;
+        flex-wrap: wrap;
+    }
+    
+    .answer-item {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .answer-label {
+        color: var(--text-muted);
+        font-size: 12px;
+    }
+    
+    .answer-box {
+        display: inline-block;
+        padding: 8px 16px;
+        border-radius: 8px;
+        font-weight: 600;
+    }
+    
+    .answer-correct {
+        background: rgba(34, 197, 94, 0.15);
+        border: 1px solid rgba(34, 197, 94, 0.3);
+        color: var(--accent-green);
+    }
+    
+    .answer-wrong {
+        background: rgba(239, 68, 68, 0.15);
+        border: 1px solid rgba(239, 68, 68, 0.3);
+        color: #f87171;
+    }
+    
+    .explanation-box {
+        padding: 16px;
+        background: rgba(155, 93, 229, 0.1);
+        border: 1px solid rgba(155, 93, 229, 0.2);
+        border-radius: 10px;
+        color: var(--text-secondary);
+        line-height: 1.7;
+    }
+    
+    .wrong-stats {
+        display: flex;
+        gap: 24px;
+        flex-wrap: wrap;
+    }
+    
+    .wrong-stat-item {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+    
+    .wrong-stat-label {
+        color: var(--text-muted);
+        font-size: 12px;
+    }
+    
+    .wrong-stat-value {
+        color: var(--text-secondary);
+        font-size: 14px;
+    }
+    
+    .wrong-count-badge {
+        background: rgba(239, 68, 68, 0.15);
+        color: #f87171;
+        padding: 4px 12px;
+        border-radius: 6px;
+        font-weight: 600;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">
+        <i class="ri-file-warning-line"></i>
+        错题详情
+    </h1>
+    <div class="page-actions">
+        <a href="{% url 'exam:my_wrongs' %}" class="btn btn-secondary">
+            <i class="ri-arrow-left-line"></i> 返回错题本
+        </a>
+    </div>
+</div>
+
+<div class="detail-card">
+    <!-- 标题 -->
+    <div class="detail-section">
+        <div class="detail-label">题目标题</div>
+        <div class="question-title">{{ wrong.question.title }}</div>
+    </div>
+    
+    <!-- 内容 -->
+    <div class="detail-section">
+        <div class="detail-label">题目内容</div>
+        <div class="question-content">{{ wrong.question.content|safe|linebreaks }}</div>
+    </div>
+    
+    <!-- 图片 -->
+    {% if wrong.question.image %}
+    <div class="detail-section">
+        <div class="detail-label">题目图片</div>
+        <img src="{{ wrong.question.image.url }}" alt="题目图片" class="question-image">
+    </div>
+    {% endif %}
+    
+    <!-- 基本信息 -->
+    <div class="detail-section">
+        <div class="detail-label">基本信息</div>
+        <div class="info-tags">
+            <span class="tag tag-primary">{{ wrong.question.get_question_type_display }}</span>
+            <span class="tag tag-warning">{{ wrong.question.get_difficulty_display }}</span>
+            {% if wrong.question.category %}
+            <span class="tag tag-secondary">{{ wrong.question.category.name }}</span>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- 选项 -->
+    {% if wrong.question.options %}
+        {% if wrong.question.question_type == 'single' or wrong.question.question_type == 'multiple' %}
+        <div class="detail-section">
+            <div class="detail-label">选项</div>
+            <div class="options-list">
+                {% for key, value in wrong.question.options.items %}
+                <div class="option-item">
+                    <span class="option-key">{{ key }}.</span>
+                    <span>{{ value }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    {% endif %}
+    
+    <!-- 答案对比 -->
+    <div class="detail-section">
+        <div class="detail-label">答案</div>
+        <div class="answer-row">
+            <div class="answer-item">
+                <span class="answer-label">正确答案</span>
+                <span class="answer-box answer-correct">{{ wrong.question.correct_answer }}</span>
+            </div>
+            {% if wrong.user_answer %}
+            <div class="answer-item">
+                <span class="answer-label">您的答案</span>
+                <span class="answer-box answer-wrong">{{ wrong.user_answer }}</span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- 解析 -->
+    {% if wrong.question.explanation %}
+    <div class="detail-section">
+        <div class="detail-label">题目解析</div>
+        <div class="explanation-box">{{ wrong.question.explanation|linebreaks }}</div>
+    </div>
+    {% endif %}
+    
+    <!-- 错题统计 -->
+    <div class="detail-section">
+        <div class="detail-label">错题统计</div>
+        <div class="wrong-stats">
+            <div class="wrong-stat-item">
+                <span class="wrong-stat-label">错误次数</span>
+                <span class="wrong-count-badge">{{ wrong.wrong_count }} 次</span>
+            </div>
+            <div class="wrong-stat-item">
+                <span class="wrong-stat-label">来源</span>
+                <span class="wrong-stat-value">{% if wrong.source == 'exam' %}考试{% else %}练习{% endif %}</span>
+            </div>
+            <div class="wrong-stat-item">
+                <span class="wrong-stat-label">最近错误时间</span>
+                <span class="wrong-stat-value">{{ wrong.last_wrong_at|date:"Y-m-d H:i" }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

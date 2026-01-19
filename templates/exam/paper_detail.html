@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>试卷详情 - {{ paper.name }} - 在线考试平台</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Microsoft YaHei', Arial, sans-serif; background: #f5f5f5; }
+        .header { background: white; padding: 15px 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .header-content { max-width: 1400px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; }
+        .btn { padding: 8px 20px; border: none; border-radius: 5px; cursor: pointer; text-decoration: none; display: inline-block; font-size: 14px; }
+        .btn-secondary { background: #6c757d; color: white; }
+        .container { max-width: 1400px; margin: 0 auto; padding: 0 20px 40px; }
+        .info-card { background: white; border-radius: 8px; padding: 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .info-item { margin-bottom: 15px; }
+        .info-label { font-weight: 600; color: #666; margin-bottom: 5px; }
+        .info-value { color: #333; }
+        .question-card { background: white; border-radius: 8px; padding: 25px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .question-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #eee; }
+        .question-number { font-size: 18px; font-weight: 600; color: #667eea; }
+        .question-score { font-size: 14px; color: #666; }
+        .question-content { margin-bottom: 15px; line-height: 1.6; color: #333; }
+        .options-list { margin-top: 10px; }
+        .option-item { padding: 10px; background: #f8f9fa; margin-bottom: 8px; border-radius: 4px; }
+        .option-item strong { color: #667eea; }
+        .answer-info { margin-top: 15px; padding: 15px; background: #e8f5e9; border-radius: 5px; }
+        .answer-info strong { color: #2e7d32; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <div><strong>试卷详情 - {{ paper.name }}</strong></div>
+            <div>
+                <a href="{% url 'exam:paper_edit_questions' paper.id %}" class="btn btn-secondary" style="margin-right:8px;">追加题目</a>
+                <a href="{% url 'exam:exam_detail' paper.exam.id %}" class="btn btn-secondary">返回考试详情</a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="container">
+        {% if messages %}
+        <div style="margin-bottom: 15px;">
+            {% for message in messages %}
+            <div style="padding: 10px 15px; border-radius: 4px; margin-bottom: 8px;
+                        {% if message.tags == 'success' %}background:#d4edda;color:#155724;border:1px solid #c3e6cb;
+                        {% elif message.tags == 'error' %}background:#f8d7da;color:#721c24;border:1px solid #f5c6cb;
+                        {% elif message.tags == 'warning' %}background:#fff3cd;color:#856404;border:1px solid #ffeeba;
+                        {% else %}background:#d1ecf1;color:#0c5460;border:1px solid #bee5eb;{% endif %}">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        <div class="info-card">
+            <h2 style="margin-bottom: 20px;">{{ paper.name }}</h2>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                <div class="info-item">
+                    <div class="info-label">所属考试</div>
+                    <div class="info-value">{{ paper.exam.title }}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">生成方式</div>
+                    <div class="info-value">{{ paper.get_generate_type_display }}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">题目总数</div>
+                    <div class="info-value">{{ paper.get_total_questions }}题</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">试卷总分</div>
+                    <div class="info-value">{{ paper.get_total_score }}分</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">创建时间</div>
+                    <div class="info-value">{{ paper.created_at|date:"Y-m-d H:i:s" }}</div>
+                </div>
+            </div>
+        </div>
+        
+        <div>
+            <h3 style="margin-bottom: 20px;">题目列表</h3>
+            
+            {% for pq in paper_questions %}
+            <div class="question-card">
+                <div class="question-header">
+                    <div>
+                        <span class="question-number">第{% if pq.order > 0 %}{{ pq.order }}{% else %}{{ forloop.counter }}{% endif %}题</span>
+                        <span class="question-score">{{ pq.score }}分</span>
+                    </div>
+                    <div style="font-size: 12px; color: #666;">
+                        {{ pq.question.get_question_type_display }} | {{ pq.question.get_difficulty_display }}
+                    </div>
+                </div>
+                
+                <div class="question-content" style="word-wrap: break-word; white-space: pre-wrap;">
+                    {{ pq.question.content|safe }}
+                </div>
+                
+                {% if pq.question.question_type in 'single,multiple' %}
+                    {% if pq.question.options %}
+                    <div class="options-list">
+                        {% for key, value in pq.question.options.items %}
+                        <div class="option-item" style="word-wrap: break-word; white-space: pre-wrap;"><strong>{{ key }}:</strong> {{ value|safe }}</div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div style="color: #999; font-style: italic; margin-top: 10px;">⚠️ 该题目没有选项数据</div>
+                    {% endif %}
+                {% endif %}
+                
+                <div class="answer-info">
+                    <strong>正确答案：</strong>{{ pq.question.correct_answer }}
+                    {% if pq.question.explanation %}
+                    <br><strong>解析：</strong>{{ pq.question.explanation }}
+                    {% endif %}
+                </div>
+            </div>
+            {% empty %}
+            <div style="text-align: center; padding: 40px; color: #999;">该试卷暂无题目</div>
+            {% endfor %}
+        </div>
+    </div>
+</body>
+</html>
+

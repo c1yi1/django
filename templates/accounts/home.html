@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>首页 - 智能学习系统</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body { 
+            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif; 
+            background: #0a0e17;
+            min-height: 100vh;
+            color: #fff;
+            overflow-x: hidden;
+        }
+        
+        /* 背景网格线 */
+        .grid-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(56, 239, 213, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(56, 239, 213, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+            pointer-events: none;
+            z-index: 0;
+        }
+        
+        /* 底部光晕 */
+        .bottom-glow {
+            position: fixed;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80%;
+            height: 300px;
+            background: radial-gradient(ellipse at center bottom, rgba(56, 239, 213, 0.15) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+        
+        /* 顶部导航 */
+        .header {
+            position: relative;
+            z-index: 100;
+            background: rgba(10, 14, 23, 0.9);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(56, 239, 213, 0.1);
+            padding: 16px 0;
+        }
+        
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .logo-icon {
+            width: 42px;
+            height: 42px;
+            background: linear-gradient(135deg, rgba(56, 239, 213, 0.2), rgba(0, 187, 249, 0.1));
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid rgba(56, 239, 213, 0.3);
+        }
+        
+        .logo-icon i {
+            font-size: 22px;
+            color: #38efd5;
+        }
+        
+        .logo-text {
+            font-size: 20px;
+            font-weight: 600;
+            color: #fff;
+        }
+        
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        .user-badge {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 16px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .user-avatar {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, #38efd5, #00bbf9);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            color: #0a0e17;
+            font-size: 14px;
+        }
+        
+        .user-name {
+            color: #fff;
+            font-weight: 500;
+        }
+        
+        .role-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .role-badge.student {
+            background: rgba(56, 239, 213, 0.15);
+            color: #38efd5;
+            border: 1px solid rgba(56, 239, 213, 0.3);
+        }
+        
+        .role-badge.teacher {
+            background: rgba(249, 115, 22, 0.15);
+            color: #fb923c;
+            border: 1px solid rgba(249, 115, 22, 0.3);
+        }
+        
+        .role-badge.admin {
+            background: rgba(168, 85, 247, 0.15);
+            color: #a78bfa;
+            border: 1px solid rgba(168, 85, 247, 0.3);
+        }
+        
+        .logout-btn {
+            padding: 10px 20px;
+            background: rgba(239, 68, 68, 0.15);
+            color: #f87171;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .logout-btn:hover {
+            background: rgba(239, 68, 68, 0.25);
+            transform: translateY(-1px);
+        }
+        
+        /* 主内容区 */
+        .main-content {
+            position: relative;
+            z-index: 10;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 48px 32px;
+        }
+        
+        /* 欢迎区域 */
+        .welcome-section {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+        
+        .welcome-title {
+            font-size: 42px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            background: linear-gradient(135deg, #fff 0%, rgba(255,255,255,0.7) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .welcome-subtitle {
+            font-size: 18px;
+            color: rgba(255, 255, 255, 0.5);
+            max-width: 600px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+        
+        .welcome-stats {
+            display: flex;
+            justify-content: center;
+            gap: 48px;
+            margin-top: 36px;
+        }
+        
+        .stat-item {
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: #38efd5;
+            text-shadow: 0 0 20px rgba(56, 239, 213, 0.5);
+        }
+        
+        .stat-label {
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.5);
+            margin-top: 4px;
+        }
+        
+        /* 功能模块网格 */
+        .module-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .module-card {
+            position: relative;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(56, 239, 213, 0.15);
+            border-radius: 16px;
+            padding: 32px 24px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow: hidden;
+            text-decoration: none;
+            color: inherit;
+            display: block;
+        }
+        
+        .module-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #38efd5, transparent);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        
+        .module-card::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at center, rgba(56, 239, 213, 0.1) 0%, transparent 70%);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        
+        .module-card:hover {
+            border-color: rgba(56, 239, 213, 0.4);
+            transform: translateY(-4px);
+            box-shadow: 
+                0 0 30px rgba(56, 239, 213, 0.15),
+                0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+        
+        .module-card:hover::before,
+        .module-card:hover::after {
+            opacity: 1;
+        }
+        
+        .module-card:hover .module-icon {
+            transform: scale(1.1);
+            text-shadow: 0 0 30px currentColor;
+        }
+        
+        .module-icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+            transition: all 0.3s;
+            position: relative;
+            z-index: 1;
+        }
+        
+        /* 不同模块的图标颜色 */
+        .module-card[data-type="exam"] .module-icon { color: #38efd5; }
+        .module-card[data-type="score"] .module-icon { color: #00bbf9; }
+        .module-card[data-type="practice"] .module-icon { color: #9b5de5; }
+        .module-card[data-type="wrong"] .module-icon { color: #f97316; }
+        .module-card[data-type="favorite"] .module-icon { color: #fbbf24; }
+        .module-card[data-type="dashboard"] .module-icon { color: #38efd5; }
+        .module-card[data-type="user"] .module-icon { color: #a78bfa; }
+        .module-card[data-type="question"] .module-icon { color: #22d3ee; }
+        .module-card[data-type="manage"] .module-icon { color: #4ade80; }
+        
+        .module-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 8px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .module-desc {
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.4);
+            line-height: 1.5;
+            position: relative;
+            z-index: 1;
+        }
+        
+        /* 消息提示 */
+        .messages {
+            max-width: 600px;
+            margin: 0 auto 30px;
+        }
+        
+        .alert {
+            padding: 16px 20px;
+            border-radius: 12px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            animation: slideIn 0.4s ease;
+        }
+        
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .alert-success {
+            background: rgba(34, 197, 94, 0.15);
+            color: #4ade80;
+            border: 1px solid rgba(34, 197, 94, 0.3);
+        }
+        
+        .alert-error {
+            background: rgba(239, 68, 68, 0.15);
+            color: #f87171;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+        
+        /* 页脚 */
+        .footer {
+            position: relative;
+            z-index: 10;
+            text-align: center;
+            padding: 32px;
+            color: rgba(255, 255, 255, 0.3);
+            font-size: 13px;
+        }
+        
+        .footer span {
+            color: #38efd5;
+        }
+        
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .header-content {
+                flex-direction: column;
+                gap: 16px;
+            }
+            
+            .welcome-title {
+                font-size: 28px;
+            }
+            
+            .welcome-stats {
+                flex-wrap: wrap;
+                gap: 24px;
+            }
+            
+            .module-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 12px;
+            }
+            
+            .module-card {
+                padding: 24px 16px;
+            }
+            
+            .module-icon {
+                font-size: 36px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .module-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .user-info {
+                flex-direction: column;
+                gap: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 背景效果 -->
+    <div class="grid-background"></div>
+    <div class="bottom-glow"></div>
+    
+    <!-- 顶部导航 -->
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">
+                <div class="logo-icon">
+                    <i class="ri-graduation-cap-fill"></i>
+                </div>
+                <span class="logo-text">智能学习系统</span>
+            </div>
+            <div class="user-info">
+                <div class="user-badge">
+                    <div class="user-avatar">{{ user.username|slice:":1"|upper }}</div>
+                    <span class="user-name">{{ user.username }}</span>
+                    <span class="role-badge {{ role }}">{{ role_display }}</span>
+                </div>
+                <form method="post" action="{% url 'accounts:logout' %}" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="logout-btn">
+                        <i class="ri-logout-box-r-line"></i>
+                        退出
+                    </button>
+                </form>
+            </div>
+        </div>
+    </header>
+    
+    <!-- 主内容 -->
+    <main class="main-content">
+        {% if messages %}
+            <div class="messages">
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }}">
+                        <i class="ri-{% if message.tags == 'success' %}checkbox-circle{% else %}error-warning{% endif %}-line"></i>
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+        
+        <!-- 欢迎区域 -->
+        <section class="welcome-section">
+            <h1 class="welcome-title">欢迎回来，{{ user.username }}</h1>
+            <p class="welcome-subtitle">
+                {% if role == 'student' %}
+                    探索知识的海洋，开启您的学习之旅。选择下方功能模块开始使用。
+                {% elif role == 'teacher' %}
+                    管理您的课程和考试，帮助学生获得更好的学习体验。
+                {% else %}
+                    全面管理系统资源，确保平台稳定高效运行。
+                {% endif %}
+            </p>
+        </section>
+        
+        <!-- 功能模块 -->
+        <div class="module-grid">
+            {% if role == 'student' %}
+                <!-- 学生功能模块 -->
+                <a href="{% url 'exam:exam_list_student' %}" class="module-card" data-type="exam">
+                    <div class="module-icon"><i class="ri-edit-circle-line"></i></div>
+                    <div class="module-title">参加考试</div>
+                    <div class="module-desc">查看可参加的考试并开始答题</div>
+                </a>
+                
+                <a href="/exam/my-scores/" class="module-card" data-type="score">
+                    <div class="module-icon"><i class="ri-bar-chart-grouped-line"></i></div>
+                    <div class="module-title">我的成绩</div>
+                    <div class="module-desc">查看历史考试成绩和统计</div>
+                </a>
+                
+                <a href="{% url 'exam:practice_home' %}" class="module-card" data-type="practice">
+                    <div class="module-icon"><i class="ri-book-open-line"></i></div>
+                    <div class="module-title">练习题库</div>
+                    <div class="module-desc">按分类/题型快速练习</div>
+                </a>
+                
+                <a href="{% url 'exam:my_wrongs' %}" class="module-card" data-type="wrong">
+                    <div class="module-icon"><i class="ri-file-warning-line"></i></div>
+                    <div class="module-title">错题本</div>
+                    <div class="module-desc">收集考试与练习的错题</div>
+                </a>
+                
+                <a href="{% url 'exam:my_favorites' %}" class="module-card" data-type="favorite">
+                    <div class="module-icon"><i class="ri-star-line"></i></div>
+                    <div class="module-title">收藏夹</div>
+                    <div class="module-desc">收藏重点题目随时回看</div>
+                </a>
+                
+            {% elif role == 'teacher' %}
+                <!-- 教师功能模块 -->
+                <a href="{% url 'exam:admin_dashboard' %}" class="module-card" data-type="dashboard">
+                    <div class="module-icon"><i class="ri-dashboard-3-line"></i></div>
+                    <div class="module-title">控制台</div>
+                    <div class="module-desc">查看考试统计与管理入口</div>
+                </a>
+                
+                <a href="{% url 'exam:question_list' %}" class="module-card" data-type="question">
+                    <div class="module-icon"><i class="ri-file-list-3-line"></i></div>
+                    <div class="module-title">题库管理</div>
+                    <div class="module-desc">管理题目，添加编辑删除</div>
+                </a>
+                
+                <a href="{% url 'exam:exam_list' %}" class="module-card" data-type="manage">
+                    <div class="module-icon"><i class="ri-calendar-check-line"></i></div>
+                    <div class="module-title">考试管理</div>
+                    <div class="module-desc">创建和管理考试试卷</div>
+                </a>
+                
+                <a href="{% url 'exam:exam_statistics_entry' %}" class="module-card" data-type="score">
+                    <div class="module-icon"><i class="ri-pie-chart-line"></i></div>
+                    <div class="module-title">成绩统计</div>
+                    <div class="module-desc">查看学生考试成绩分析</div>
+                </a>
+                
+            {% elif role == 'admin' %}
+                <!-- 管理员功能模块 -->
+                <a href="{% url 'exam:admin_dashboard' %}" class="module-card" data-type="dashboard">
+                    <div class="module-icon"><i class="ri-dashboard-3-line"></i></div>
+                    <div class="module-title">控制台</div>
+                    <div class="module-desc">系统总览与快捷入口</div>
+                </a>
+                
+                <a href="/admin/" class="module-card" data-type="user">
+                    <div class="module-icon"><i class="ri-shield-user-line"></i></div>
+                    <div class="module-title">用户管理</div>
+                    <div class="module-desc">管理系统用户和权限</div>
+                </a>
+                
+                <a href="{% url 'exam:question_list' %}" class="module-card" data-type="question">
+                    <div class="module-icon"><i class="ri-file-list-3-line"></i></div>
+                    <div class="module-title">题库管理</div>
+                    <div class="module-desc">管理题目，添加编辑删除</div>
+                </a>
+                
+                <a href="{% url 'exam:exam_list' %}" class="module-card" data-type="manage">
+                    <div class="module-icon"><i class="ri-calendar-check-line"></i></div>
+                    <div class="module-title">考试管理</div>
+                    <div class="module-desc">创建和管理考试试卷</div>
+                </a>
+                
+                <a href="{% url 'exam:exam_statistics_entry' %}" class="module-card" data-type="score">
+                    <div class="module-icon"><i class="ri-pie-chart-line"></i></div>
+                    <div class="module-title">成绩统计</div>
+                    <div class="module-desc">查看学生考试成绩分析</div>
+                </a>
+            {% endif %}
+        </div>
+    </main>
+    
+    <!-- 页脚 -->
+    <footer class="footer">
+        <p>Powered by <span>智能学习系统</span> · 专注在线教育</p>
+    </footer>
+    
+    <script>
+        // 卡片悬停光效跟随鼠标
+        document.querySelectorAll('.module-card').forEach(card => {
+            card.addEventListener('mousemove', (e) => {
+                const rect = card.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                card.style.setProperty('--mouse-x', `${x}px`);
+                card.style.setProperty('--mouse-y', `${y}px`);
+            });
+        });
+    </script>
+</body>
+</html>

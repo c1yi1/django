@@ -1,0 +1,179 @@
+@startuml 智能学习系统ER图
+
+!define PK_COLOR #FFE6E6
+!define FK_COLOR #E6F3FF
+
+skinparam linetype ortho
+
+entity "User" as user {
+  * id : INT <<PK>>
+  --
+  * username : VARCHAR(150) <<UK>>
+  * email : VARCHAR(254)
+  * password : VARCHAR(128)
+  * date_joined : DATETIME
+  * is_active : BOOLEAN
+  * is_superuser : BOOLEAN
+}
+
+entity "UserProfile" as profile {
+  * id : INT <<PK>>
+  --
+  * user_id : INT <<FK>>
+  * role : VARCHAR(20)
+  * phone : VARCHAR(20)
+  * student_id : VARCHAR(50)
+  * gender : VARCHAR(10)
+  * major : VARCHAR(100)
+  * grade : VARCHAR(20)
+  * class_name : VARCHAR(50)
+  * created_at : DATETIME
+  * updated_at : DATETIME
+}
+
+entity "Category" as category {
+  * id : INT <<PK>>
+  --
+  * name : VARCHAR(100) <<UK>>
+  * description : TEXT
+  * created_at : DATETIME
+}
+
+entity "Question" as question {
+  * id : INT <<PK>>
+  --
+  * title : VARCHAR(500)
+  * content : TEXT
+  * question_type : VARCHAR(20)
+  * difficulty : VARCHAR(20)
+  * category_id : INT <<FK>>
+  * score : INT
+  * options : JSON
+  * image : VARCHAR(100)
+  * correct_answer : VARCHAR(500)
+  * explanation : TEXT
+  * created_by_id : INT <<FK>>
+  * created_at : DATETIME
+  * updated_at : DATETIME
+  * is_active : BOOLEAN
+}
+
+entity "Exam" as exam {
+  * id : INT <<PK>>
+  --
+  * title : VARCHAR(200)
+  * description : TEXT
+  * created_by_id : INT <<FK>>
+  * start_time : DATETIME
+  * end_time : DATETIME
+  * duration : INT
+  * total_score : INT
+  * pass_score : INT
+  * max_attempts : INT
+  * show_answer : BOOLEAN
+  * show_score : BOOLEAN
+  * status : VARCHAR(20)
+  * created_at : DATETIME
+  * updated_at : DATETIME
+}
+
+entity "Paper" as paper {
+  * id : INT <<PK>>
+  --
+  * exam_id : INT <<FK>>
+  * name : VARCHAR(200)
+  * generate_type : VARCHAR(20)
+  * random_rules : JSON
+  * created_at : DATETIME
+}
+
+entity "PaperQuestion" as paper_question {
+  * id : INT <<PK>>
+  --
+  * paper_id : INT <<FK>>
+  * question_id : INT <<FK>>
+  * order : INT
+  * score : INT
+}
+
+entity "ExamAttempt" as attempt {
+  * id : INT <<PK>>
+  --
+  * exam_id : INT <<FK>>
+  * paper_id : INT <<FK>>
+  * user_id : INT <<FK>>
+  * start_time : DATETIME
+  * submit_time : DATETIME
+  * status : VARCHAR(20)
+  * total_score : FLOAT
+  * is_passed : BOOLEAN
+}
+
+entity "Answer" as answer {
+  * id : INT <<PK>>
+  --
+  * attempt_id : INT <<FK>>
+  * question_id : INT <<FK>>
+  * user_answer : VARCHAR(500)
+  * is_correct : BOOLEAN
+  * score : FLOAT
+  * is_favorited : BOOLEAN
+}
+
+entity "ExamActivityLog" as log {
+  * id : INT <<PK>>
+  --
+  * attempt_id : INT <<FK>>
+  * user_id : INT <<FK>>
+  * event_type : VARCHAR(50)
+  * detail : VARCHAR(255)
+  * created_at : DATETIME
+}
+
+entity "WrongQuestion" as wrong {
+  * id : INT <<PK>>
+  --
+  * user_id : INT <<FK>>
+  * question_id : INT <<FK>>
+  * source : VARCHAR(20)
+  * wrong_count : INT
+  * last_wrong_at : DATETIME
+}
+
+entity "FavoriteQuestion" as favorite {
+  * id : INT <<PK>>
+  --
+  * user_id : INT <<FK>>
+  * question_id : INT <<FK>>
+  * created_at : DATETIME
+}
+
+' 关系定义
+user ||--|| profile : "一对一"
+user ||--o{ question : "创建"
+user ||--o{ exam : "创建"
+user ||--o{ attempt : "参加"
+user ||--o{ wrong : "错题"
+user ||--o{ favorite : "收藏"
+user ||--o{ log : "行为日志"
+
+category ||--o{ question : "分类"
+
+question ||--o{ paper_question : "包含"
+question ||--o{ answer : "答案"
+question ||--o{ wrong : "错题"
+question ||--o{ favorite : "收藏"
+
+exam ||--o{ paper : "包含"
+exam ||--o{ attempt : "答题记录"
+
+paper ||--o{ paper_question : "题目关联"
+paper ||--o{ attempt : "答题记录"
+
+attempt ||--o{ answer : "答案记录"
+attempt ||--o{ log : "行为日志"
+
+@enduml
+
+
+

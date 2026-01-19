@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理试卷题目 - {{ paper.name }} - 在线考试平台</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Microsoft YaHei', Arial, sans-serif; background: #f5f5f5; }
+        .header { background: white; padding: 15px 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .header-content { max-width: 1400px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; }
+        .btn { padding: 8px 20px; border: none; border-radius: 5px; cursor: pointer; text-decoration: none; display: inline-block; font-size: 14px; }
+        .btn-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+        .btn-secondary { background: #6c757d; color: white; }
+        .container { max-width: 1400px; margin: 0 auto; padding: 0 20px 40px; }
+        .card { background: white; border-radius: 8px; padding: 25px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 8px; font-weight: 600; color: #333; }
+        .filter-bar { background: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 15px; }
+        .filter-row { display: flex; gap: 15px; align-items: center; flex-wrap: wrap; }
+        .filter-item { display: flex; align-items: center; gap: 8px; }
+        .filter-item label { font-weight: 600; color: #666; }
+        .filter-item select { padding: 6px 12px; border: 1px solid #ddd; border-radius: 4px; }
+        .question-list { max-height: 550px; overflow-y: auto; border: 1px solid #eee; border-radius: 5px; padding: 15px; background: #fff; }
+        .question-item { padding: 15px; border: 1px solid #eee; border-radius: 5px; margin-bottom: 10px; }
+        .question-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .question-title { font-weight: 600; color: #333; }
+        .question-meta { font-size: 12px; color: #666; }
+        .question-content { color: #555; margin-bottom: 10px; }
+        .question-score { display: flex; align-items: center; gap: 10px; }
+        .question-score input { width: 80px; padding: 6px 8px; border-radius: 4px; border: 1px solid #ddd; }
+        .form-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 25px; }
+        .info-row { display: flex; gap: 30px; font-size: 14px; color: #555; margin-bottom: 10px; flex-wrap: wrap; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <div><strong>管理试卷题目 - {{ paper.name }}</strong></div>
+            <div>
+                <a href="{% url 'exam:paper_detail' paper.id %}" class="btn btn-secondary">返回试卷详情</a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="container">
+        {% if messages %}
+        <div style="margin-bottom: 15px;">
+            {% for message in messages %}
+            <div style="padding: 10px 15px; border-radius: 4px; margin-bottom: 8px;
+                        {% if message.tags == 'success' %}background:#d4edda;color:#155724;border:1px solid #c3e6cb;
+                        {% elif message.tags == 'error' %}background:#f8d7da;color:#721c24;border:1px solid #f5c6cb;
+                        {% elif message.tags == 'warning' %}background:#fff3cd;color:#856404;border:1px solid #ffeeba;
+                        {% else %}background:#d1ecf1;color:#0c5460;border:1px solid #bee5eb;{% endif %}">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        
+        <div class="card">
+            <div class="info-row">
+                <div>所属考试：<strong>{{ exam.title }}</strong></div>
+                <div>当前题目数量：<strong>{{ paper.get_total_questions }} 题</strong></div>
+                <div>当前试卷总分：<strong>{{ paper.get_total_score }} 分</strong></div>
+            </div>
+            <p style="font-size: 13px; color: #888; margin-top: 5px;">
+                提示：这里用于在试卷已经生成（包括随机组卷）后继续追加题目，不会修改或删除现有题目。
+            </p>
+        </div>
+        
+        <div class="card">
+            <form method="post">
+                {% csrf_token %}
+                
+                <div class="filter-bar">
+                    <div class="filter-row">
+                        <div class="filter-item">
+                            <label>分类：</label>
+                            <select name="filter_category" id="filter_category">
+                                <option value="">全部</option>
+                                {% for cat in categories %}
+                                <option value="{{ cat.id }}" {% if selected_category == cat.id|stringformat:"s" %}selected{% endif %}>{{ cat.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="filter-item">
+                            <label>类型：</label>
+                            <select name="filter_type" id="filter_type">
+                                <option value="">全部</option>
+                                <option value="single" {% if selected_type == 'single' %}selected{% endif %}>单选题</option>
+                                <option value="multiple" {% if selected_type == 'multiple' %}selected{% endif %}>多选题</option>
+                                <option value="judge" {% if selected_type == 'judge' %}selected{% endif %}>判断题</option>
+                                <option value="subjective" {% if selected_type == 'subjective' %}selected{% endif %}>主观题</option>
+                            </select>
+                        </div>
+                        <button type="button" class="btn btn-primary" onclick="filterQuestions()">筛选</button>
+                    </div>
+                </div>
+                
+                <div class="question-list">
+                    {% for question in questions %}
+                    <div class="question-item">
+                        <div class="question-header">
+                            <div>
+                                <div class="question-title">{{ question.title }}</div>
+                                <div class="question-meta">
+                                    {{ question.get_question_type_display }} | 
+                                    {{ question.get_difficulty_display }} | 
+                                    {{ question.category.name|default:"未分类" }}
+                                </div>
+                            </div>
+                            <div>
+                                <input type="checkbox" name="questions" value="{{ question.id }}" id="q{{ question.id }}">
+                            </div>
+                        </div>
+                        <div class="question-content">{{ question.content|truncatewords:30|safe }}</div>
+                        <div class="question-score">
+                            <label>分值：</label>
+                            <input type="number" name="score_{{ question.id }}" value="{{ question.score }}" min="1" disabled>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div style="text-align: center; padding: 40px; color: #999;">没有更多可添加的题目（题库中其他题目已全部在本试卷中）。</div>
+                    {% endfor %}
+                </div>
+                
+                <div class="form-actions">
+                    <a href="{% url 'exam:paper_detail' paper.id %}" class="btn btn-secondary">取消</a>
+                    <button type="submit" class="btn btn-primary">添加到试卷</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <script>
+        function filterQuestions() {
+            const category = document.getElementById('filter_category').value;
+            const type = document.getElementById('filter_type').value;
+            const url = new URL(window.location.href);
+            if (category) {
+                url.searchParams.set('category', category);
+            } else {
+                url.searchParams.delete('category');
+            }
+            if (type) {
+                url.searchParams.set('type', type);
+            } else {
+                url.searchParams.delete('type');
+            }
+            window.location.href = url.toString();
+        }
+        
+        // 启用/禁用分值输入
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('input[name="questions"]').forEach(checkbox => {
+                checkbox.addEventListener('change', function() {
+                    const questionId = this.value;
+                    const scoreInput = document.querySelector(`input[name="score_${questionId}"]`);
+                    if (scoreInput) {
+                        scoreInput.disabled = !this.checked;
+                    }
+                });
+            });
+        });
+        
+        window.filterQuestions = filterQuestions;
+    </script>
+</body>
+</html>
+
+
+

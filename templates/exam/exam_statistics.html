@@ -1,0 +1,336 @@
+{% extends 'base.html' %}
+
+{% block title %}成绩统计 - {{ exam.title }} - 智能学习系统{% endblock %}
+
+{% block header_nav %}
+<nav class="header-nav">
+    <a href="{% url 'exam:admin_dashboard' %}" class="nav-link">
+        <i class="ri-dashboard-3-line"></i> 控制台
+    </a>
+    <a href="{% url 'exam:exam_list' %}" class="nav-link">
+        <i class="ri-calendar-check-line"></i> 考试管理
+    </a>
+    <a href="{% url 'exam:exam_statistics_entry' %}" class="nav-link active">
+        <i class="ri-pie-chart-line"></i> 成绩统计
+    </a>
+</nav>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 20px;
+        margin-bottom: 32px;
+    }
+    
+    @media (max-width: 1200px) {
+        .stats-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+    
+    @media (max-width: 768px) {
+        .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    
+    .charts-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 24px;
+        margin-bottom: 32px;
+    }
+    
+    @media (max-width: 900px) {
+        .charts-grid { grid-template-columns: 1fr; }
+    }
+    
+    .chart-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 24px;
+    }
+    
+    .chart-title {
+        font-size: 16px;
+        font-weight: 600;
+        margin-bottom: 16px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .chart-title i {
+        color: var(--accent-primary);
+    }
+    
+    .chart-container {
+        height: 320px;
+    }
+    
+    .table-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        overflow: hidden;
+    }
+    
+    .table-header {
+        padding: 20px 24px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    
+    .table-header h3 {
+        font-size: 16px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .table-header h3 i {
+        color: var(--accent-primary);
+    }
+    
+    .data-table th {
+        background: rgba(255, 255, 255, 0.02);
+        padding: 14px 20px;
+    }
+    
+    .data-table td {
+        padding: 14px 20px;
+    }
+    
+    .status-passed {
+        color: var(--accent-green);
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+    
+    .status-failed {
+        color: #f87171;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">
+        <i class="ri-pie-chart-line"></i>
+        {{ exam.title }}
+    </h1>
+    <p class="page-subtitle">考试成绩统计与分析</p>
+    <div class="page-actions">
+        <a href="{% url 'exam:exam_statistics_entry' %}" class="btn btn-secondary">
+            <i class="ri-arrow-left-line"></i> 返回列表
+        </a>
+        <a href="{% url 'exam:exam_detail' exam.id %}" class="btn btn-secondary">
+            <i class="ri-eye-line"></i> 考试详情
+        </a>
+    </div>
+</div>
+
+<!-- 统计数据 -->
+{% if stats.total_attempts %}
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-icon"><i class="ri-file-list-3-line"></i></div>
+        <div class="stat-value">{{ stats.total_attempts }}</div>
+        <div class="stat-label">答卷数量</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon"><i class="ri-bar-chart-line"></i></div>
+        <div class="stat-value">{{ stats.avg_score }}</div>
+        <div class="stat-label">平均分</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon"><i class="ri-arrow-up-line"></i></div>
+        <div class="stat-value">{{ stats.max_score }}</div>
+        <div class="stat-label">最高分</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon"><i class="ri-arrow-down-line"></i></div>
+        <div class="stat-value">{{ stats.min_score }}</div>
+        <div class="stat-label">最低分</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon"><i class="ri-checkbox-circle-line"></i></div>
+        <div class="stat-value">{{ stats.pass_rate }}%</div>
+        <div class="stat-label">及格率 ({{ stats.pass_count }}人)</div>
+    </div>
+</div>
+{% else %}
+<div class="card" style="text-align: center; padding: 40px;">
+    <p style="color: var(--text-muted);">暂无答卷数据</p>
+</div>
+{% endif %}
+
+<!-- 图表 -->
+{% if stats.sections %}
+<div class="charts-grid">
+    <div class="chart-card">
+        <div class="chart-title">
+            <i class="ri-pie-chart-line"></i> 分数段分布
+        </div>
+        <div id="scorePie" class="chart-container"></div>
+    </div>
+    <div class="chart-card">
+        <div class="chart-title">
+            <i class="ri-bar-chart-line"></i> 分数段人数
+        </div>
+        <div id="scoreBar" class="chart-container"></div>
+    </div>
+</div>
+{% endif %}
+
+<!-- 明细列表 -->
+{% if attempts %}
+<div class="table-card">
+    <div class="table-header">
+        <h3><i class="ri-list-check-2"></i> 答卷明细</h3>
+    </div>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>考生</th>
+                <th style="width: 180px;">提交时间</th>
+                <th style="width: 100px;">得分</th>
+                <th style="width: 120px;">状态</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for a in attempts %}
+            <tr>
+                <td>{{ a.user.username }}</td>
+                <td>{{ a.submit_time|date:"Y-m-d H:i"|default:"—" }}</td>
+                <td>{{ a.total_score }} 分</td>
+                <td>
+                    {% if a.is_passed %}
+                    <span class="status-passed">
+                        <i class="ri-checkbox-circle-fill"></i> 通过
+                    </span>
+                    {% else %}
+                    <span class="status-failed">
+                        <i class="ri-close-circle-fill"></i> 未通过
+                    </span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+{{ stats.sections|default:"[]"|json_script:"sections-data" }}
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<script>
+(function() {
+    const sections = JSON.parse(document.getElementById('sections-data').textContent || '[]');
+    if (!sections || !sections.length) return;
+
+    // 饼图
+    const pieDom = document.getElementById('scorePie');
+    if (pieDom) {
+        const pieChart = echarts.init(pieDom);
+        pieChart.setOption({
+            backgroundColor: 'transparent',
+            tooltip: {
+                trigger: 'item',
+                backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                borderColor: 'rgba(56, 239, 213, 0.3)',
+                textStyle: { color: '#fff' }
+            },
+            legend: {
+                top: '5%',
+                textStyle: { color: 'rgba(255,255,255,0.6)' }
+            },
+            series: [{
+                name: '分数段',
+                type: 'pie',
+                radius: ['40%', '70%'],
+                avoidLabelOverlap: true,
+                itemStyle: {
+                    borderRadius: 8,
+                    borderColor: '#0f172a',
+                    borderWidth: 2
+                },
+                label: { show: false },
+                labelLine: { show: false },
+                data: sections.map((s, i) => ({
+                    name: s.label,
+                    value: s.count,
+                    itemStyle: {
+                        color: ['#38efd5', '#00bbf9', '#9b5de5', '#f97316', '#fbbf24'][i % 5]
+                    }
+                })),
+                emphasis: {
+                    label: {
+                        show: true,
+                        formatter: '{b}: {d}%',
+                        fontSize: 14,
+                        fontWeight: '600',
+                        color: '#fff'
+                    },
+                    labelLine: { show: true }
+                }
+            }]
+        });
+        window.addEventListener('resize', () => pieChart.resize());
+    }
+
+    // 柱状图
+    const barDom = document.getElementById('scoreBar');
+    if (barDom) {
+        const barChart = echarts.init(barDom);
+        barChart.setOption({
+            backgroundColor: 'transparent',
+            tooltip: {
+                trigger: 'axis',
+                backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                borderColor: 'rgba(56, 239, 213, 0.3)',
+                textStyle: { color: '#fff' }
+            },
+            grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+            xAxis: {
+                type: 'category',
+                data: sections.map(s => s.label),
+                axisLine: { lineStyle: { color: 'rgba(255,255,255,0.1)' } },
+                axisLabel: { color: 'rgba(255,255,255,0.5)' }
+            },
+            yAxis: {
+                type: 'value',
+                axisLine: { lineStyle: { color: 'rgba(255,255,255,0.1)' } },
+                axisLabel: { color: 'rgba(255,255,255,0.5)' },
+                splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } }
+            },
+            series: [{
+                data: sections.map(s => s.count),
+                type: 'bar',
+                barWidth: '50%',
+                itemStyle: {
+                    color: {
+                        type: 'linear',
+                        x: 0, y: 0, x2: 0, y2: 1,
+                        colorStops: [
+                            { offset: 0, color: '#38efd5' },
+                            { offset: 1, color: '#00bbf9' }
+                        ]
+                    },
+                    borderRadius: [6, 6, 0, 0]
+                }
+            }]
+        });
+        window.addEventListener('resize', () => barChart.resize());
+    }
+})();
+</script>
+{% endblock %}

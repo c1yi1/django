@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>创建试卷 - {{ exam.title }} - 在线考试平台</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Microsoft YaHei', Arial, sans-serif; background: #f5f5f5; }
+        .header { background: white; padding: 15px 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .header-content { max-width: 1400px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; }
+        .btn { padding: 8px 20px; border: none; border-radius: 5px; cursor: pointer; text-decoration: none; display: inline-block; font-size: 14px; }
+        .btn-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+        .btn-secondary { background: #6c757d; color: white; }
+        .container { max-width: 1400px; margin: 0 auto; padding: 0 20px 40px; }
+        .form-card { background: white; border-radius: 8px; padding: 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 8px; font-weight: 600; color: #333; }
+        .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .tab-container { margin-top: 20px; }
+        .tab-buttons { display: flex; gap: 10px; margin-bottom: 20px; }
+        .tab-button { padding: 10px 20px; border: none; background: #f8f9fa; cursor: pointer; border-radius: 5px 5px 0 0; }
+        .tab-button.active { background: white; border-bottom: 2px solid #667eea; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .question-list { max-height: 500px; overflow-y: auto; border: 1px solid #eee; border-radius: 5px; padding: 15px; }
+        .question-item { padding: 15px; border: 1px solid #eee; border-radius: 5px; margin-bottom: 10px; }
+        .question-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .question-title { font-weight: 600; color: #333; }
+        .question-meta { font-size: 12px; color: #666; }
+        .question-content { color: #555; margin-bottom: 10px; }
+        .question-score { display: flex; align-items: center; gap: 10px; }
+        .question-score input { width: 80px; }
+        .filter-bar { background: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 15px; }
+        .filter-row { display: flex; gap: 15px; align-items: center; }
+        .filter-item { display: flex; align-items: center; gap: 8px; }
+        .filter-item label { font-weight: 600; color: #666; }
+        .filter-item select { padding: 6px 12px; border: 1px solid #ddd; border-radius: 4px; }
+        .form-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 30px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <div><strong>创建试卷 - {{ exam.title }}</strong></div>
+            <div>
+                <a href="{% url 'exam:exam_detail' exam.id %}" class="btn btn-secondary">返回</a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="container">
+        <div class="form-card">
+            <form method="post">
+                {% csrf_token %}
+                
+                <div class="form-group">
+                    <label>试卷名称 *</label>
+                    <input type="text" name="name" required placeholder="例如：A卷">
+                </div>
+                
+                <div class="form-group">
+                    <label>生成方式 *</label>
+                    <select name="generate_type" id="generate_type" onchange="toggleGenerateType()" required>
+                        <option value="manual">手动选题</option>
+                        <option value="random">随机组卷</option>
+                    </select>
+                </div>
+                
+                <div class="tab-container">
+                    <div class="tab-buttons">
+                        <button type="button" class="tab-button active" onclick="switchTab('manual')">手动选题</button>
+                        <button type="button" class="tab-button" onclick="switchTab('random')">随机组卷</button>
+                    </div>
+                    
+                    <div id="manual_tab" class="tab-content active">
+                        <div class="filter-bar">
+                            <div class="filter-row">
+                                <div class="filter-item">
+                                    <label>分类：</label>
+                                    <select name="filter_category" id="filter_category">
+                                        <option value="">全部</option>
+                                        {% for cat in categories %}
+                                        <option value="{{ cat.id }}" {% if selected_category == cat.id|stringformat:"s" %}selected{% endif %}>{{ cat.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="filter-item">
+                                    <label>类型：</label>
+                                    <select name="filter_type" id="filter_type">
+                                        <option value="">全部</option>
+                                        <option value="single" {% if selected_type == 'single' %}selected{% endif %}>单选题</option>
+                                        <option value="multiple" {% if selected_type == 'multiple' %}selected{% endif %}>多选题</option>
+                                        <option value="judge" {% if selected_type == 'judge' %}selected{% endif %}>判断题</option>
+                                    </select>
+                                </div>
+                                <button type="button" class="btn btn-primary" onclick="filterQuestions()">筛选</button>
+                            </div>
+                        </div>
+                        
+                        <div class="question-list">
+                            {% for question in questions %}
+                            <div class="question-item">
+                                <div class="question-header">
+                                    <div>
+                                        <div class="question-title">{{ question.title }}</div>
+                                        <div class="question-meta">
+                                            {{ question.get_question_type_display }} | 
+                                            {{ question.get_difficulty_display }} | 
+                                            {{ question.category.name|default:"未分类" }}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <input type="checkbox" name="questions" value="{{ question.id }}" id="q{{ question.id }}">
+                                    </div>
+                                </div>
+                                <div class="question-content">{{ question.content|truncatewords:30|safe }}</div>
+                                <div class="question-score">
+                                    <label>分值：</label>
+                                    <input type="number" name="score_{{ question.id }}" value="{{ question.score }}" min="1" disabled>
+                                </div>
+                            </div>
+                            {% empty %}
+                            <div style="text-align: center; padding: 40px; color: #999;">暂无题目</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <div id="random_tab" class="tab-content">
+                        <div style="background: #e3f2fd; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
+                            <p style="color: #1976d2; font-weight: 600; margin-bottom: 5px;">📝 随机组卷说明</p>
+                            <p style="color: #666; font-size: 13px; line-height: 1.6;">
+                                请设置各类型题目的数量，系统将从题库中随机抽取相应数量的题目组成试卷。<br>
+                                至少需要设置一种题目类型的数量大于0。
+                            </p>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>单选题数量</label>
+                                <input type="number" name="single_count" id="single_count" value="0" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label>多选题数量</label>
+                                <input type="number" name="multiple_count" id="multiple_count" value="0" min="0">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>判断题数量</label>
+                                <input type="number" name="judge_count" id="judge_count" value="0" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label>难度筛选</label>
+                                <select name="difficulty" id="difficulty">
+                                    <option value="all">全部</option>
+                                    <option value="easy">简单</option>
+                                    <option value="medium">中等</option>
+                                    <option value="hard">困难</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>分类筛选</label>
+                            <select name="category" id="random_category">
+                                <option value="">全部</option>
+                                {% for cat in categories %}
+                                <option value="{{ cat.id }}">{{ cat.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div style="background: #fff3cd; padding: 10px; border-radius: 5px; margin-top: 15px;">
+                            <p style="color: #856404; font-size: 12px; margin: 0;">
+                                ⚠️ 提示：请确保题库中有足够的题目，否则创建试卷会失败。
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-actions">
+                    <a href="{% url 'exam:exam_detail' exam.id %}" class="btn btn-secondary">取消</a>
+                    <button type="submit" class="btn btn-primary">创建试卷</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <script>
+        function toggleGenerateType() {
+            const generateType = document.getElementById('generate_type').value;
+            console.log('生成方式改变为:', generateType);
+            switchTab(generateType);
+        }
+        
+        function switchTab(tab) {
+            console.log('切换到标签:', tab);
+            
+            // 更新下拉框的值
+            const generateTypeSelect = document.getElementById('generate_type');
+            if (generateTypeSelect) {
+                generateTypeSelect.value = tab;
+            }
+            
+            // 更新标签按钮
+            const tabButtons = document.querySelectorAll('.tab-button');
+            tabButtons.forEach((btn, index) => {
+                btn.classList.remove('active');
+                if ((tab === 'manual' && index === 0) || (tab === 'random' && index === 1)) {
+                    btn.classList.add('active');
+                    console.log('激活按钮:', index, btn.textContent);
+                }
+            });
+            
+            // 更新标签内容
+            const manualTab = document.getElementById('manual_tab');
+            const randomTab = document.getElementById('random_tab');
+            
+            if (manualTab && randomTab) {
+                manualTab.classList.remove('active');
+                randomTab.classList.remove('active');
+                
+                if (tab === 'manual') {
+                    manualTab.classList.add('active');
+                    console.log('显示手动选题标签');
+                } else if (tab === 'random') {
+                    randomTab.classList.add('active');
+                    console.log('显示随机组卷标签');
+                }
+            } else {
+                console.error('找不到标签元素:', { manualTab, randomTab });
+            }
+        }
+        
+        // 筛选题目函数
+        function filterQuestions() {
+            const category = document.getElementById('filter_category').value;
+            const type = document.getElementById('filter_type').value;
+            const url = new URL(window.location.href);
+            if (category) {
+                url.searchParams.set('category', category);
+            } else {
+                url.searchParams.delete('category');
+            }
+            if (type) {
+                url.searchParams.set('type', type);
+            } else {
+                url.searchParams.delete('type');
+            }
+            window.location.href = url.toString();
+        }
+        
+        // 表单提交验证
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.querySelector('form[method="post"]');
+            if (form) {
+                form.addEventListener('submit', function(e) {
+                    const generateType = document.getElementById('generate_type').value;
+                    console.log('表单提交，生成方式:', generateType);
+                    
+                    if (generateType === 'random') {
+                        const singleCount = parseInt(document.getElementById('single_count').value) || 0;
+                        const multipleCount = parseInt(document.getElementById('multiple_count').value) || 0;
+                        const judgeCount = parseInt(document.getElementById('judge_count').value) || 0;
+                        
+                        console.log('题目数量:', { singleCount, multipleCount, judgeCount });
+                        
+                        if (singleCount === 0 && multipleCount === 0 && judgeCount === 0) {
+                            e.preventDefault();
+                            alert('请至少设置一种题目的数量大于0！');
+                            return false;
+                        }
+                        
+                        // 验证至少有一种类型大于0
+                        if (singleCount < 0 || multipleCount < 0 || judgeCount < 0) {
+                            e.preventDefault();
+                            alert('题目数量不能为负数！');
+                            return false;
+                        }
+                    } else {
+                        const selectedQuestions = document.querySelectorAll('input[name="questions"]:checked');
+                        if (selectedQuestions.length === 0) {
+                            e.preventDefault();
+                            alert('请至少选择一道题目！');
+                            return false;
+                        }
+                    }
+                    
+                    // 如果验证通过，显示加载提示
+                    const submitBtn = form.querySelector('button[type="submit"]');
+                    if (submitBtn) {
+                        submitBtn.disabled = true;
+                        submitBtn.textContent = '创建中...';
+                    }
+                });
+            } else {
+                console.error('找不到表单元素');
+            }
+        });
+        
+        // 启用/禁用分值输入
+        document.querySelectorAll('input[name="questions"]').forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                const questionId = this.value;
+                const scoreInput = document.querySelector(`input[name="score_${questionId}"]`);
+                if (scoreInput) {
+                    scoreInput.disabled = !this.checked;
+                }
+            });
+        });
+        
+        // 页面加载时初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('页面加载完成，初始化标签');
+            const generateTypeSelect = document.getElementById('generate_type');
+            if (generateTypeSelect) {
+                const generateType = generateTypeSelect.value;
+                console.log('当前生成方式:', generateType);
+                switchTab(generateType);
+            } else {
+                console.error('找不到生成方式下拉框');
+            }
+        });
+        
+        // 确保函数在全局作用域
+        window.toggleGenerateType = toggleGenerateType;
+        window.switchTab = switchTab;
+        window.filterQuestions = filterQuestions;
+    </script>
+</body>
+</html>
+

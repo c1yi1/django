@@ -1,0 +1,194 @@
+{% extends 'base.html' %}
+
+{% block title %}我的收藏 - 智能学习系统{% endblock %}
+
+{% block header_nav %}
+<nav class="header-nav">
+    <a href="{% url 'accounts:home' %}" class="nav-link">
+        <i class="ri-home-4-line"></i> 首页
+    </a>
+    <a href="{% url 'exam:exam_list_student' %}" class="nav-link">
+        <i class="ri-edit-circle-line"></i> 考试
+    </a>
+    <a href="{% url 'exam:practice_home' %}" class="nav-link">
+        <i class="ri-book-open-line"></i> 练习
+    </a>
+    <a href="{% url 'exam:my_wrongs' %}" class="nav-link">
+        <i class="ri-file-warning-line"></i> 错题
+    </a>
+    <a href="{% url 'exam:my_favorites' %}" class="nav-link active">
+        <i class="ri-star-line"></i> 收藏
+    </a>
+</nav>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .fav-list {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+    
+    .fav-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 24px;
+        transition: all 0.3s;
+    }
+    
+    .fav-card:hover {
+        border-color: var(--border-hover);
+    }
+    
+    .fav-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 12px;
+    }
+    
+    .fav-title {
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--text-primary);
+        line-height: 1.5;
+        flex: 1;
+        margin-right: 16px;
+    }
+    
+    .fav-tags {
+        display: flex;
+        gap: 8px;
+        flex-shrink: 0;
+    }
+    
+    .fav-content {
+        color: var(--text-secondary);
+        font-size: 14px;
+        line-height: 1.7;
+        margin-bottom: 12px;
+    }
+    
+    .fav-image {
+        max-width: 300px;
+        border-radius: 10px;
+        border: 1px solid var(--border-color);
+        margin-bottom: 12px;
+    }
+    
+    .fav-meta {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        color: var(--text-muted);
+        font-size: 13px;
+        margin-bottom: 16px;
+    }
+    
+    .fav-actions {
+        display: flex;
+        gap: 10px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">
+        <i class="ri-star-line"></i>
+        我的收藏
+    </h1>
+    <p class="page-subtitle">收藏的重点题目，随时回顾复习</p>
+    <div class="page-actions">
+        <a href="{% url 'exam:practice_home' %}" class="btn btn-primary">
+            <i class="ri-play-line"></i> 去练习
+        </a>
+    </div>
+</div>
+
+{% csrf_token %}
+
+<div class="fav-list">
+    {% if favs %}
+        {% for f in favs %}
+        <div class="fav-card" id="fav-{{ f.question.id }}">
+            <div class="fav-header">
+                <div class="fav-title">{{ f.question.title }}</div>
+                <div class="fav-tags">
+                    <span class="tag tag-primary">{{ f.question.get_question_type_display }}</span>
+                    <span class="tag tag-warning">{{ f.question.get_difficulty_display }}</span>
+                </div>
+            </div>
+            
+            <div class="fav-content">{{ f.question.content|safe|truncatewords:60 }}</div>
+            
+            {% if f.question.image %}
+            <img src="{{ f.question.image.url }}" alt="题目图片" class="fav-image">
+            {% endif %}
+            
+            <div class="fav-meta">
+                {% if f.question.category %}
+                <span><i class="ri-folder-line"></i> {{ f.question.category.name }}</span>
+                {% endif %}
+                <span><i class="ri-time-line"></i> 收藏于 {{ f.created_at|date:"Y-m-d H:i" }}</span>
+            </div>
+            
+            <div class="fav-actions">
+                <a href="{% url 'exam:question_detail' f.question.id %}" class="btn btn-secondary btn-sm">
+                    <i class="ri-eye-line"></i> 查看详情
+                </a>
+                <button class="btn btn-danger btn-sm unfavorite-btn" data-question-id="{{ f.question.id }}">
+                    <i class="ri-star-off-line"></i> 取消收藏
+                </button>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="empty-state">
+            <i class="ri-star-line"></i>
+            <p>暂无收藏的题目</p>
+            <a href="{% url 'exam:practice_home' %}" class="btn btn-primary" style="margin-top: 16px;">
+                <i class="ri-play-line"></i> 去练习并收藏
+            </a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.unfavorite-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const questionId = this.getAttribute('data-question-id');
+            if (!confirm('确定要取消收藏这道题目吗？')) return;
+            
+            fetch('/exam/practice/api/favorites/' + questionId + '/toggle/', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || '',
+                    'Content-Type': 'application/json',
+                },
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('fav-' + questionId).remove();
+                    // 检查是否还有收藏
+                    if (document.querySelectorAll('.fav-card').length === 0) {
+                        location.reload();
+                    }
+                } else {
+                    alert('操作失败：' + (data.message || '未知错误'));
+                }
+            })
+            .catch(err => {
+                alert('网络错误，请重试');
+            });
+        });
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,177 @@
+{% extends 'base.html' %}
+
+{% block title %}错题本 - 智能学习系统{% endblock %}
+
+{% block header_nav %}
+<nav class="header-nav">
+    <a href="{% url 'accounts:home' %}" class="nav-link">
+        <i class="ri-home-4-line"></i> 首页
+    </a>
+    <a href="{% url 'exam:exam_list_student' %}" class="nav-link">
+        <i class="ri-edit-circle-line"></i> 考试
+    </a>
+    <a href="{% url 'exam:practice_home' %}" class="nav-link">
+        <i class="ri-book-open-line"></i> 练习
+    </a>
+    <a href="{% url 'exam:my_wrongs' %}" class="nav-link active">
+        <i class="ri-file-warning-line"></i> 错题
+    </a>
+    <a href="{% url 'exam:my_favorites' %}" class="nav-link">
+        <i class="ri-star-line"></i> 收藏
+    </a>
+</nav>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .wrong-list {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+    
+    .wrong-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 24px;
+        transition: all 0.3s;
+    }
+    
+    .wrong-card:hover {
+        border-color: var(--border-hover);
+    }
+    
+    .wrong-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 12px;
+    }
+    
+    .wrong-title {
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--text-primary);
+        line-height: 1.5;
+        flex: 1;
+        margin-right: 16px;
+    }
+    
+    .wrong-tags {
+        display: flex;
+        gap: 8px;
+        flex-shrink: 0;
+    }
+    
+    .wrong-content {
+        color: var(--text-secondary);
+        font-size: 14px;
+        line-height: 1.7;
+        margin-bottom: 12px;
+    }
+    
+    .wrong-image {
+        max-width: 300px;
+        border-radius: 10px;
+        border: 1px solid var(--border-color);
+        margin-bottom: 12px;
+    }
+    
+    .wrong-meta {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        flex-wrap: wrap;
+        color: var(--text-muted);
+        font-size: 13px;
+        margin-bottom: 16px;
+    }
+    
+    .wrong-count {
+        background: rgba(239, 68, 68, 0.15);
+        color: #f87171;
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-weight: 600;
+    }
+    
+    .source-tag {
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-size: 12px;
+    }
+    
+    .source-tag.exam { background: rgba(56, 239, 213, 0.15); color: var(--accent-primary); }
+    .source-tag.practice { background: rgba(155, 93, 229, 0.15); color: var(--accent-purple); }
+    
+    .wrong-actions {
+        display: flex;
+        gap: 10px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">
+        <i class="ri-file-warning-line"></i>
+        错题本
+    </h1>
+    <p class="page-subtitle">收集考试与练习中的错题，针对性复习提高</p>
+    <div class="page-actions">
+        <a href="{% url 'exam:practice_home' %}" class="btn btn-primary">
+            <i class="ri-play-line"></i> 去练习
+        </a>
+    </div>
+</div>
+
+<div class="wrong-list">
+    {% if wrongs %}
+        {% for w in wrongs %}
+        <div class="wrong-card">
+            <div class="wrong-header">
+                <div class="wrong-title">{{ w.question.title }}</div>
+                <div class="wrong-tags">
+                    <span class="tag tag-primary">{{ w.question.get_question_type_display }}</span>
+                    <span class="tag tag-warning">{{ w.question.get_difficulty_display }}</span>
+                </div>
+            </div>
+            
+            <div class="wrong-content">{{ w.question.content|safe|truncatewords:60 }}</div>
+            
+            {% if w.question.image %}
+            <img src="{{ w.question.image.url }}" alt="题目图片" class="wrong-image">
+            {% endif %}
+            
+            <div class="wrong-meta">
+                <span class="wrong-count">
+                    <i class="ri-error-warning-line"></i> 错误 {{ w.wrong_count }} 次
+                </span>
+                <span class="source-tag {% if w.source == 'exam' %}exam{% else %}practice{% endif %}">
+                    {% if w.source == 'exam' %}考试{% else %}练习{% endif %}
+                </span>
+                {% if w.question.category %}
+                <span><i class="ri-folder-line"></i> {{ w.question.category.name }}</span>
+                {% endif %}
+                <span><i class="ri-time-line"></i> 最近错误 {{ w.last_wrong_at|date:"Y-m-d H:i" }}</span>
+            </div>
+            
+            <div class="wrong-actions">
+                <a href="{% url 'exam:wrong_question_detail' w.id %}" class="btn btn-secondary btn-sm">
+                    <i class="ri-eye-line"></i> 查看详情
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="empty-state">
+            <i class="ri-checkbox-circle-line"></i>
+            <p>太棒了！暂无错题记录</p>
+            <a href="{% url 'exam:practice_home' %}" class="btn btn-primary" style="margin-top: 16px;">
+                <i class="ri-play-line"></i> 继续练习
+            </a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

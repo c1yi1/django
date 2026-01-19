@@ -1,0 +1,273 @@
+{% extends 'base.html' %}
+
+{% block title %}题目详情 - 智能学习系统{% endblock %}
+
+{% block header_nav %}
+<nav class="header-nav">
+    {% if role == 'teacher' or role == 'admin' %}
+    <a href="{% url 'exam:admin_dashboard' %}" class="nav-link">
+        <i class="ri-dashboard-3-line"></i> 控制台
+    </a>
+    <a href="{% url 'exam:question_list' %}" class="nav-link active">
+        <i class="ri-file-list-3-line"></i> 题库管理
+    </a>
+    {% else %}
+    <a href="{% url 'accounts:home' %}" class="nav-link">
+        <i class="ri-home-4-line"></i> 首页
+    </a>
+    <a href="{% url 'exam:practice_home' %}" class="nav-link">
+        <i class="ri-book-open-line"></i> 练习
+    </a>
+    <a href="{% url 'exam:my_favorites' %}" class="nav-link active">
+        <i class="ri-star-line"></i> 收藏
+    </a>
+    {% endif %}
+</nav>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .detail-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 32px;
+    }
+    
+    .detail-section {
+        padding: 20px 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    
+    .detail-section:last-child {
+        border-bottom: none;
+        padding-bottom: 0;
+    }
+    
+    .detail-section:first-child {
+        padding-top: 0;
+    }
+    
+    .detail-label {
+        color: var(--text-muted);
+        font-size: 13px;
+        margin-bottom: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .detail-value {
+        color: var(--text-primary);
+        line-height: 1.7;
+    }
+    
+    .question-title {
+        font-size: 20px;
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+    
+    .question-content {
+        color: var(--text-secondary);
+        font-size: 15px;
+    }
+    
+    .question-image {
+        max-width: 400px;
+        border-radius: 12px;
+        border: 1px solid var(--border-color);
+        margin-top: 8px;
+    }
+    
+    .info-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: center;
+    }
+    
+    .info-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--text-secondary);
+        font-size: 14px;
+    }
+    
+    .options-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .option-item {
+        padding: 14px 16px;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 10px;
+    }
+    
+    .option-key {
+        color: var(--accent-primary);
+        font-weight: 600;
+        margin-right: 8px;
+    }
+    
+    .answer-box {
+        display: inline-block;
+        padding: 8px 16px;
+        background: rgba(56, 239, 213, 0.15);
+        border: 1px solid rgba(56, 239, 213, 0.3);
+        border-radius: 8px;
+        color: var(--accent-primary);
+        font-weight: 600;
+        font-size: 16px;
+    }
+    
+    .explanation-box {
+        padding: 16px;
+        background: rgba(155, 93, 229, 0.1);
+        border: 1px solid rgba(155, 93, 229, 0.2);
+        border-radius: 10px;
+        color: var(--text-secondary);
+    }
+    
+    .meta-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 16px;
+    }
+    
+    .meta-item {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+    
+    .meta-label {
+        color: var(--text-muted);
+        font-size: 12px;
+    }
+    
+    .meta-value {
+        color: var(--text-secondary);
+        font-size: 14px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">
+        <i class="ri-file-text-line"></i>
+        题目详情
+    </h1>
+    <div class="page-actions">
+        {% if role == 'teacher' or role == 'admin' %}
+        <a href="{% url 'exam:question_list' %}" class="btn btn-secondary">
+            <i class="ri-arrow-left-line"></i> 返回列表
+        </a>
+        <a href="{% url 'exam:question_edit' question.id %}" class="btn btn-success">
+            <i class="ri-edit-line"></i> 编辑
+        </a>
+        {% else %}
+        <a href="{% url 'exam:my_favorites' %}" class="btn btn-secondary">
+            <i class="ri-arrow-left-line"></i> 返回收藏夹
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="detail-card">
+    <!-- 标题 -->
+    <div class="detail-section">
+        <div class="detail-label">题目标题</div>
+        <div class="question-title">{{ question.title }}</div>
+    </div>
+    
+    <!-- 内容 -->
+    <div class="detail-section">
+        <div class="detail-label">题目内容</div>
+        <div class="question-content">{{ question.content|safe|linebreaks }}</div>
+    </div>
+    
+    <!-- 图片 -->
+    {% if question.image %}
+    <div class="detail-section">
+        <div class="detail-label">题目图片</div>
+        <img src="{{ question.image.url }}" alt="题目图片" class="question-image">
+    </div>
+    {% endif %}
+    
+    <!-- 基本信息 -->
+    <div class="detail-section">
+        <div class="detail-label">基本信息</div>
+        <div class="info-tags">
+            <span class="tag tag-primary">{{ question.get_question_type_display }}</span>
+            <span class="tag tag-warning">{{ question.get_difficulty_display }}</span>
+            <span class="info-item">
+                <i class="ri-trophy-line"></i> {{ question.score }}分
+            </span>
+            {% if question.category %}
+            <span class="info-item">
+                <i class="ri-folder-line"></i> {{ question.category.name }}
+            </span>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- 选项 -->
+    {% if question.options %}
+        {% if question.question_type == 'single' or question.question_type == 'multiple' %}
+        <div class="detail-section">
+            <div class="detail-label">选项</div>
+            <div class="options-list">
+                {% for key, value in question.options.items %}
+                <div class="option-item">
+                    <span class="option-key">{{ key }}.</span>
+                    <span>{{ value }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    {% endif %}
+    
+    <!-- 正确答案 -->
+    <div class="detail-section">
+        <div class="detail-label">正确答案</div>
+        <div class="answer-box">{{ question.correct_answer }}</div>
+    </div>
+    
+    <!-- 解析 -->
+    {% if question.explanation %}
+    <div class="detail-section">
+        <div class="detail-label">题目解析</div>
+        <div class="explanation-box">{{ question.explanation|linebreaks }}</div>
+    </div>
+    {% endif %}
+    
+    <!-- 元信息 -->
+    <div class="detail-section">
+        <div class="detail-label">其他信息</div>
+        <div class="meta-grid">
+            <div class="meta-item">
+                <span class="meta-label">创建者</span>
+                <span class="meta-value">{{ question.created_by.username|default:"系统" }}</span>
+            </div>
+            <div class="meta-item">
+                <span class="meta-label">创建时间</span>
+                <span class="meta-value">{{ question.created_at|date:"Y-m-d H:i" }}</span>
+            </div>
+            <div class="meta-item">
+                <span class="meta-label">更新时间</span>
+                <span class="meta-value">{{ question.updated_at|date:"Y-m-d H:i" }}</span>
+            </div>
+            <div class="meta-item">
+                <span class="meta-label">状态</span>
+                <span class="meta-value">{% if question.is_active %}启用{% else %}禁用{% endif %}</span>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

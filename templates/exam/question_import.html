@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>批量导入题目 - 在线考试平台</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Microsoft YaHei', Arial, sans-serif; background: #f5f5f5; }
+        .header { background: white; padding: 15px 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .header-content { max-width: 1000px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; }
+        .btn { padding: 8px 20px; border: none; border-radius: 5px; cursor: pointer; text-decoration: none; display: inline-block; font-size: 14px; }
+        .btn-secondary { background: #6c757d; color: white; }
+        .btn-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+        .container { max-width: 1000px; margin: 0 auto; padding: 0 20px 40px; }
+        .form-card { background: white; border-radius: 8px; padding: 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; font-weight: 600; color: #333; margin-bottom: 8px; }
+        .form-group select, .form-group input[type="file"] { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
+        .form-group select { background: white; }
+        .form-group input[type="file"] { padding: 8px; }
+        .help-text { color: #666; font-size: 13px; margin-top: 5px; }
+        .template-links { margin-top: 20px; padding: 20px; background: #f8f9fa; border-radius: 5px; }
+        .template-links h3 { margin-bottom: 15px; color: #333; }
+        .template-links a { display: inline-block; margin-right: 15px; padding: 8px 15px; background: #667eea; color: white; text-decoration: none; border-radius: 4px; }
+        .template-links a:hover { background: #5568d3; }
+        .form-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 30px; }
+        .info-box { padding: 15px; background: #e3f2fd; border-left: 4px solid #2196f3; margin-bottom: 20px; border-radius: 4px; }
+        .info-box h4 { margin-bottom: 10px; color: #1976d2; }
+        .info-box ul { margin-left: 20px; color: #666; }
+        .info-box li { margin-bottom: 5px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <div><strong>批量导入题目</strong></div>
+            <div>
+                <a href="{% url 'exam:question_list' %}" class="btn btn-secondary">返回题库</a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="container">
+        {% if messages %}
+        <div style="margin-bottom: 20px;">
+            {% for message in messages %}
+            <div style="padding: 12px 16px; border-radius: 6px; margin-bottom: 10px;
+                        {% if message.tags == 'success' %}background:#d4edda;color:#155724;border:1px solid #c3e6cb;
+                        {% elif message.tags == 'error' %}background:#f8d7da;color:#721c24;border:1px solid #f5c6cb;
+                        {% elif message.tags == 'warning' %}background:#fff3cd;color:#856404;border:1px solid #ffeeba;
+                        {% else %}background:#d1ecf1;color:#0c5460;border:1px solid #bee5eb;{% endif %}">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        
+        <div class="info-box">
+            <h4>📋 导入说明</h4>
+            <ul>
+                <li>支持的文件格式：Excel (.xlsx/.xls)、CSV (.csv)、JSON (.json)</li>
+                <li>Excel和CSV格式：第一行为表头，从第二行开始为题目数据</li>
+                <li>JSON格式：应为包含questions数组的对象，或直接为题目数组</li>
+                <li>题目类型：single（单选题）、multiple（多选题）、judge（判断题）</li>
+                <li>难度等级：easy（简单）、medium（中等）、hard（困难）</li>
+                <li>如果题目没有指定分类，将使用下方选择的默认分类</li>
+            </ul>
+        </div>
+        
+        <div class="form-card">
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                
+                <div class="form-group">
+                    <label for="category">默认分类（可选）</label>
+                    <select name="category" id="category">
+                        <option value="">不设置默认分类</option>
+                        {% for cat in categories %}
+                        <option value="{{ cat.id }}">{{ cat.name }}</option>
+                        {% endfor %}
+                    </select>
+                    <div class="help-text">如果导入的题目没有指定分类，将使用此分类</div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="file">选择文件</label>
+                    <input type="file" name="file" id="file" accept=".xlsx,.xls,.csv,.json" required>
+                    <div class="help-text">支持 Excel (.xlsx/.xls)、CSV (.csv)、JSON (.json) 格式</div>
+                </div>
+                
+                <div class="template-links">
+                    <h3>📥 下载导入模板</h3>
+                    <a href="{% url 'exam:download_template' 'excel' %}">Excel模板</a>
+                    <a href="{% url 'exam:download_template' 'csv' %}">CSV模板</a>
+                    <a href="{% url 'exam:download_template' 'json' %}">JSON模板</a>
+                </div>
+                
+                <div class="form-actions">
+                    <a href="{% url 'exam:question_list' %}" class="btn btn-secondary">取消</a>
+                    <button type="submit" class="btn btn-primary">开始导入</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</body>
+</html>
+
+
+
+
+

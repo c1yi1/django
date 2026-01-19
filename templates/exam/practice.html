@@ -1,0 +1,505 @@
+{% extends 'base.html' %}
+
+{% block title %}在线练习 - 智能学习系统{% endblock %}
+
+{% block header_nav %}
+<nav class="header-nav">
+    <a href="{% url 'accounts:home' %}" class="nav-link">
+        <i class="ri-home-4-line"></i> 首页
+    </a>
+    <a href="{% url 'exam:exam_list_student' %}" class="nav-link">
+        <i class="ri-edit-circle-line"></i> 考试
+    </a>
+    <a href="{% url 'exam:practice_home' %}" class="nav-link active">
+        <i class="ri-book-open-line"></i> 练习
+    </a>
+    <a href="{% url 'exam:my_wrongs' %}" class="nav-link">
+        <i class="ri-file-warning-line"></i> 错题
+    </a>
+    <a href="{% url 'exam:my_favorites' %}" class="nav-link">
+        <i class="ri-star-line"></i> 收藏
+    </a>
+</nav>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .practice-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 24px;
+    }
+    
+    .filter-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 24px;
+        margin-bottom: 24px;
+    }
+    
+    .filter-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 16px;
+    }
+    
+    .filter-group label {
+        display: block;
+        color: var(--text-muted);
+        font-size: 13px;
+        margin-bottom: 8px;
+    }
+    
+    .filter-group select,
+    .filter-group input {
+        width: 100%;
+        padding: 10px 14px;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 10px;
+        color: var(--text-primary);
+        font-size: 14px;
+    }
+    
+    .questions-area {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+    
+    .q-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 24px;
+        transition: all 0.3s;
+    }
+    
+    .q-card:hover {
+        border-color: var(--border-hover);
+    }
+    
+    .q-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 16px;
+    }
+    
+    .q-number {
+        font-size: 18px;
+        font-weight: 700;
+        color: var(--accent-primary);
+    }
+    
+    .q-tags {
+        display: flex;
+        gap: 8px;
+    }
+    
+    .q-tag {
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 500;
+    }
+    
+    .q-tag.type { background: rgba(56, 239, 213, 0.15); color: var(--accent-primary); }
+    .q-tag.diff { background: rgba(251, 191, 36, 0.15); color: var(--accent-yellow); }
+    
+    .q-title {
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--text-primary);
+        line-height: 1.6;
+        margin-bottom: 12px;
+    }
+    
+    .q-content {
+        color: var(--text-secondary);
+        line-height: 1.7;
+        margin-bottom: 16px;
+    }
+    
+    .q-image {
+        max-width: 400px;
+        border-radius: 10px;
+        border: 1px solid var(--border-color);
+        margin-bottom: 16px;
+    }
+    
+    .options-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin-bottom: 16px;
+    }
+    
+    .option-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 14px 16px;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 10px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .option-item:hover {
+        background: rgba(255, 255, 255, 0.06);
+        border-color: rgba(56, 239, 213, 0.3);
+    }
+    
+    .option-item input {
+        width: 18px;
+        height: 18px;
+        accent-color: var(--accent-primary);
+    }
+    
+    .option-item span {
+        color: var(--text-secondary);
+        flex: 1;
+    }
+    
+    .q-actions {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+    
+    .result-text {
+        font-weight: 600;
+        font-size: 14px;
+    }
+    
+    .result-text.correct { color: var(--accent-green); }
+    .result-text.wrong { color: #f87171; }
+    
+    .hint-box {
+        margin-top: 12px;
+        padding: 14px 16px;
+        background: rgba(56, 239, 213, 0.08);
+        border: 1px solid rgba(56, 239, 213, 0.2);
+        border-radius: 10px;
+        color: var(--text-secondary);
+        font-size: 14px;
+        line-height: 1.6;
+        display: none;
+    }
+    
+    .hint-box.show {
+        display: block;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: var(--text-muted);
+    }
+    
+    .empty-state i {
+        font-size: 64px;
+        margin-bottom: 16px;
+        opacity: 0.3;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="practice-header">
+    <div>
+        <h1 class="page-title" style="margin-bottom: 8px;">
+            <i class="ri-book-open-line"></i>
+            在线练习
+        </h1>
+        <p class="page-subtitle">选择条件开始练习，即时查看答案解析</p>
+    </div>
+    <button id="refreshBtn" class="btn btn-primary">
+        <i class="ri-play-line"></i> 开始练习
+    </button>
+</div>
+
+<!-- 筛选条件 -->
+<div class="filter-card">
+    <div class="filter-grid">
+        <div class="filter-group">
+            <label>分类</label>
+            <select id="category">
+                <option value="">全部分类</option>
+                {% for c in categories %}
+                <option value="{{ c.id }}">{{ c.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="filter-group">
+            <label>难度</label>
+            <select id="difficulty">
+                <option value="">不限</option>
+                {% for val,label in difficulties %}
+                <option value="{{ val }}">{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="filter-group">
+            <label>题型</label>
+            <select id="question_type">
+                <option value="">全部客观题</option>
+                {% for val,label in question_types %}
+                {% if val != 'subjective' %}
+                <option value="{{ val }}">{{ label }}</option>
+                {% endif %}
+                {% endfor %}
+            </select>
+        </div>
+        <div class="filter-group">
+            <label>题目数量</label>
+            <input type="number" id="limit" value="10" min="1" max="50" placeholder="1-50">
+        </div>
+    </div>
+</div>
+
+<!-- 题目列表 -->
+<div class="questions-area" id="questions"></div>
+<div class="empty-state" id="empty">
+    <i class="ri-file-list-3-line"></i>
+    <p>请选择条件并点击「开始练习」</p>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const questionsEl = document.getElementById('questions');
+    const emptyEl = document.getElementById('empty');
+    const refreshBtn = document.getElementById('refreshBtn');
+
+    const csrfToken = (function() {
+        const match = document.cookie.match(/csrftoken=([^;]+)/);
+        return match ? match[1] : '';
+    })();
+
+    function createOptionInput(q, opt) {
+        const wrapper = document.createElement('label');
+        wrapper.className = 'option-item';
+        const input = document.createElement('input');
+        const name = `q-${q.id}`;
+        if (q.question_type === 'multiple') {
+            input.type = 'checkbox';
+        } else {
+            input.type = 'radio';
+        }
+        input.name = name;
+        input.value = opt.key;
+        wrapper.appendChild(input);
+        const text = document.createElement('span');
+        text.innerText = `${opt.key}. ${opt.text}`;
+        wrapper.appendChild(text);
+        return wrapper;
+    }
+
+    function renderQuestions(list) {
+        questionsEl.innerHTML = '';
+        if (!list.length) {
+            emptyEl.querySelector('p').innerText = '未找到符合条件的练习题';
+            emptyEl.style.display = 'block';
+            return;
+        }
+        emptyEl.style.display = 'none';
+
+        list.forEach((q, idx) => {
+            const card = document.createElement('div');
+            card.className = 'q-card';
+
+            // Header
+            const header = document.createElement('div');
+            header.className = 'q-header';
+            const number = document.createElement('div');
+            number.className = 'q-number';
+            number.innerText = `第 ${idx + 1} 题`;
+            const tags = document.createElement('div');
+            tags.className = 'q-tags';
+            tags.innerHTML = `
+                <span class="q-tag type">${q.question_type_display || q.question_type}</span>
+                <span class="q-tag diff">${q.difficulty_display || q.difficulty}</span>
+            `;
+            header.appendChild(number);
+            header.appendChild(tags);
+            card.appendChild(header);
+
+            // Title
+            const title = document.createElement('div');
+            title.className = 'q-title';
+            title.innerText = q.title;
+            card.appendChild(title);
+
+            // Content
+            if (q.content) {
+                const content = document.createElement('div');
+                content.className = 'q-content';
+                content.innerHTML = q.content;
+                card.appendChild(content);
+            }
+
+            // Image
+            if (q.image) {
+                const img = document.createElement('img');
+                img.src = q.image;
+                img.alt = '题目图片';
+                img.className = 'q-image';
+                card.appendChild(img);
+            }
+
+            // Options
+            const options = document.createElement('div');
+            options.className = 'options-list';
+            if (q.question_type === 'judge') {
+                [{ key: 'True', text: '正确' }, { key: 'False', text: '错误' }]
+                    .forEach(opt => options.appendChild(createOptionInput(q, opt)));
+            } else {
+                q.options.forEach(opt => options.appendChild(createOptionInput(q, opt)));
+            }
+            card.appendChild(options);
+
+            // Actions
+            const actions = document.createElement('div');
+            actions.className = 'q-actions';
+            
+            const checkBtn = document.createElement('button');
+            checkBtn.className = 'btn btn-primary btn-sm';
+            checkBtn.innerHTML = '<i class="ri-check-line"></i> 检查答案';
+            
+            const favBtn = document.createElement('button');
+            favBtn.className = 'btn btn-secondary btn-sm';
+            favBtn.innerHTML = q.is_favorited 
+                ? '<i class="ri-star-fill"></i> 已收藏' 
+                : '<i class="ri-star-line"></i> 收藏';
+            favBtn.onclick = () => toggleFavorite(q.id, favBtn);
+            
+            const result = document.createElement('span');
+            result.className = 'result-text';
+            
+            checkBtn.onclick = () => checkAnswer(q.id, q.question_type, result, card);
+            
+            actions.appendChild(checkBtn);
+            actions.appendChild(favBtn);
+            actions.appendChild(result);
+            card.appendChild(actions);
+
+            // Hint box
+            const hint = document.createElement('div');
+            hint.className = 'hint-box';
+            hint.id = `hint-${q.id}`;
+            card.appendChild(hint);
+
+            questionsEl.appendChild(card);
+        });
+    }
+
+    async function fetchQuestions() {
+        refreshBtn.disabled = true;
+        refreshBtn.innerHTML = '<i class="ri-loader-4-line"></i> 加载中...';
+        questionsEl.innerHTML = '';
+        emptyEl.querySelector('p').innerText = '正在加载题目...';
+        emptyEl.style.display = 'block';
+
+        const params = new URLSearchParams();
+        const category = document.getElementById('category').value;
+        const difficulty = document.getElementById('difficulty').value;
+        const question_type = document.getElementById('question_type').value;
+        const limit = document.getElementById('limit').value || 10;
+        if (category) params.append('category', category);
+        if (difficulty) params.append('difficulty', difficulty);
+        if (question_type) params.append('question_type', question_type);
+        params.append('limit', limit);
+
+        try {
+            const res = await fetch(`{% url 'exam:practice_questions_api' %}?${params.toString()}`);
+            const data = await res.json();
+            if (data.success) {
+                renderQuestions(data.questions || []);
+            } else {
+                emptyEl.querySelector('p').innerText = data.message || '加载失败';
+            }
+        } catch (e) {
+            emptyEl.querySelector('p').innerText = '加载失败，请稍后重试';
+        } finally {
+            refreshBtn.disabled = false;
+            refreshBtn.innerHTML = '<i class="ri-play-line"></i> 开始练习';
+        }
+    }
+
+    async function checkAnswer(id, type, resultEl, cardEl) {
+        const name = `q-${id}`;
+        let answer = '';
+        if (type === 'multiple') {
+            const checked = Array.from(document.querySelectorAll(`input[name="${name}"]:checked`)).map(i => i.value);
+            answer = checked;
+        } else {
+            const checked = document.querySelector(`input[name="${name}"]:checked`);
+            answer = checked ? checked.value : '';
+        }
+        if (!answer || (Array.isArray(answer) && !answer.length)) {
+            resultEl.innerText = '请先选择答案';
+            resultEl.className = 'result-text wrong';
+            return;
+        }
+
+        resultEl.innerText = '判分中...';
+        resultEl.className = 'result-text';
+
+        try {
+            const res = await fetch(`{% url 'exam:practice_check_api' question_id=0 %}`.replace('0', id), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken,
+                },
+                body: JSON.stringify({ answer }),
+            });
+            const data = await res.json();
+            if (!data.success) {
+                resultEl.innerText = data.message || '判分失败';
+                resultEl.className = 'result-text wrong';
+                return;
+            }
+            if (data.is_correct) {
+                resultEl.innerHTML = '<i class="ri-checkbox-circle-line"></i> 回答正确';
+                resultEl.className = 'result-text correct';
+            } else {
+                resultEl.innerHTML = '<i class="ri-close-circle-line"></i> 回答错误';
+                resultEl.className = 'result-text wrong';
+            }
+            const hint = document.getElementById(`hint-${id}`);
+            const correct = Array.isArray(data.correct_answer) ? data.correct_answer.join(', ') : data.correct_answer;
+            hint.innerHTML = `<strong>正确答案：</strong>${correct}${data.explanation ? '<br><strong>解析：</strong>' + data.explanation : ''}`;
+            hint.classList.add('show');
+        } catch (e) {
+            resultEl.innerText = '判分失败';
+            resultEl.className = 'result-text wrong';
+        }
+    }
+
+    async function toggleFavorite(id, btn) {
+        try {
+            const res = await fetch(`{% url 'exam:favorite_toggle_api' question_id=0 %}`.replace('0', id), {
+                method: 'POST',
+                headers: { 'X-CSRFToken': csrfToken }
+            });
+            const data = await res.json();
+            if (data.success) {
+                btn.innerHTML = data.favorited 
+                    ? '<i class="ri-star-fill"></i> 已收藏' 
+                    : '<i class="ri-star-line"></i> 收藏';
+            }
+        } catch (e) {
+            console.error('收藏失败', e);
+        }
+    }
+
+    refreshBtn.addEventListener('click', fetchQuestions);
+</script>
+{% endblock %}
