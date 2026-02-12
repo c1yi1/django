@@ -688,5 +688,255 @@
         setTimeout(updateQuestionNav, 500);
         setInterval(updateQuestionNav, 5000);
     </script>
+<style>
+    /* 监控窗口样式：右下角悬浮 */
+    #monitor-container {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        width: 180px;
+        height: 135px;
+        border: 2px solid #ef4444; /* 红色警戒框 */
+        border-radius: 8px;
+        background-color: #000;
+        z-index: 9999; /* 确保在最顶层 */
+        box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        overflow: hidden;
+        transition: opacity 0.3s;
+    }
+    /* 鼠标悬停时变半透明，防止挡住内容 */
+    #monitor-container:hover {
+        opacity: 0.3;
+    }
+    #monitor-video {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transform: scaleX(-1); /* 镜像显示，让用户看着更自然 */
+    }
+    #monitor-status {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        background: rgba(239, 68, 68, 0.9);
+        color: white;
+        font-size: 11px;
+        text-align: center;
+        padding: 2px 0;
+        font-weight: bold;
+    }
+    /* 录制中小红点闪烁动画 */
+    .recording-dot {
+        display: inline-block;
+        width: 6px;
+        height: 6px;
+        background-color: white;
+        border-radius: 50%;
+        margin-right: 4px;
+        animation: blink-dot 1s infinite;
+    }
+    @keyframes blink-dot { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
+</style>
+
+<div id="monitor-container">
+    <div id="monitor-status"><span class="recording-dot"></span>监考中</div>
+    <video id="monitor-video" autoplay playsinline muted></video>
+    <canvas id="monitor-canvas" style="display:none;"></canvas>
+</div>
+
+<script>
+(function() {
+    // 使用立即执行函数，避免变量名污染你原本的全局变量
+    const video = document.getElementById('monitor-video');
+    const canvas = document.getElementById('monitor-canvas');
+    const ctx = canvas.getContext('2d');
+
+    // 获取 CSRF Token (复用你页面里已有的 input)
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+    // 1. 启动摄像头
+    async function initCamera() {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 320, height: 240 } });
+            video.srcObject = stream;
+            console.log("✅ [反作弊] 摄像头已启动");
+
+            // 启动定时抓拍：每 5 秒一次 (5000毫秒)
+            setInterval(captureAndUpload, 5000);
+        } catch (err) {
+            console.error("❌ 无法启动摄像头:", err);
+            alert("⚠️ 严重警告：\n无法访问您的摄像头！\n请允许浏览器使用摄像头，否则系统判定为违规。");
+        }
+    }
+
+    // 2. 抓拍并上传
+    function captureAndUpload() {
+        // 如果视频还没准备好，跳过
+        if (!video.videoWidth) return;
+
+        // 截图 (压缩尺寸以减少流量)
+        canvas.width = 320;
+        canvas.height = 240;
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        // 转 Base64 (使用 JPEG 格式，0.6 质量压缩)
+        const dataURL = canvas.toDataURL('image/jpeg', 0.6);
+
+        // 这里的 URL 需要和你 urls.py 里配置的一致
+        const uploadUrl = "/api/upload_frame/";
+
+        fetch(uploadUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken // 带上 Token 防止 403 错误
+            },
+            body: JSON.stringify({
+                image: dataURL,
+                // 复用你页面原本的 attemptId 变量
+                attempt_id: typeof attemptId !== 'undefined' ? attemptId : null
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'alert') {
+                // 后端检测到异常（无人/多人），在前端警告
+                showWarningMessage(data.msg); // 复用你原本定义的警告框函数
+                console.warn("[反作弊警告]", data.msg);
+            }
+        })
+        .catch(err => console.error("监控上传失败:", err)); // 静默失败，不打扰考试
+    }
+
+    // 页面加载完成后立即启动
+    window.addEventListener('load', initCamera);
+})();
+</script>
+<style>
+    /* 监控窗口样式 */
+    #monitor-container {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        width: 180px;
+        height: 135px;
+        border: 2px solid #ef4444;
+        border-radius: 8px;
+        background-color: #000;
+        z-index: 9999;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        overflow: hidden;
+        transition: opacity 0.3s;
+    }
+    #monitor-container:hover { opacity: 0.3; }
+    #monitor-video {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transform: scaleX(-1);
+    }
+    #monitor-status {
+        position: absolute;
+        top: 0; left: 0; width: 100%;
+        background: rgba(239, 68, 68, 0.9);
+        color: white; font-size: 11px; text-align: center;
+        padding: 2px 0; font-weight: bold;
+    }
+    .recording-dot {
+        display: inline-block; width: 6px; height: 6px;
+        background-color: white; border-radius: 50%;
+        margin-right: 4px; animation: blink-dot 1s infinite;
+    }
+    @keyframes blink-dot { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
+</style>
+
+<div id="monitor-container">
+    <div id="monitor-status"><span class="recording-dot"></span>监考中</div>
+    <video id="monitor-video" autoplay playsinline muted></video>
+    <canvas id="monitor-canvas" style="display:none;"></canvas>
+</div>
+
+<script>
+(function() {
+    // 等待页面完全加载后再运行
+    window.addEventListener('load', function() {
+        const video = document.getElementById('monitor-video');
+        const canvas = document.getElementById('monitor-canvas');
+
+        // 1. 安全获取 CSRF Token
+        // 我们尝试从 input 中获取，如果获取不到（比如页面渲染慢），就给个空字符串，避免报错
+        const csrfInput = document.querySelector('[name=csrfmiddlewaretoken]');
+        const csrfToken = csrfInput ? csrfInput.value : '';
+
+        // 2. 动态生成正确的上传地址 (解决 404 问题)
+        // 注意：这里使用了 Django 模板标签，确保你的文件是 .html 而不是 .js
+        const uploadUrl = "{% url 'exam:upload_frame' %}";
+
+        // 3. 启动摄像头
+        async function initCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 320, height: 240 } });
+                video.srcObject = stream;
+                // 强制播放，防止部分浏览器黑屏
+                video.play().catch(e => console.log("自动播放被阻止，等待交互"));
+
+                console.log("✅ [反作弊] 摄像头启动成功，上传地址:", uploadUrl);
+
+                // 启动定时抓拍：每 5 秒一次
+                setInterval(captureAndUpload, 5000);
+            } catch (err) {
+                console.error("❌ 无法启动摄像头:", err);
+                alert("⚠️ 无法访问摄像头！请检查浏览器权限。");
+            }
+        }
+
+        // 4. 抓拍并上传
+        function captureAndUpload() {
+            if (!video.videoWidth || !canvas) return;
+
+            const ctx = canvas.getContext('2d');
+            canvas.width = 320;
+            canvas.height = 240;
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            const dataURL = canvas.toDataURL('image/jpeg', 0.6);
+
+            fetch(uploadUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify({
+                    image: dataURL,
+                    // 这里的 attempt.id 来自 Django 模板上下文
+                    attempt_id: "{{ attempt.id }}"
+                })
+            })
+            .then(res => {
+                if (!res.ok) throw new Error("HTTP error " + res.status);
+                return res.json();
+            })
+            .then(data => {
+                if (data.status === 'alert') {
+                    // 如果你定义了 warningMessage 函数则调用，否则用 alert
+                    if (typeof showWarningMessage === 'function') {
+                        showWarningMessage(data.msg);
+                    } else {
+                        console.warn(data.msg);
+                    }
+                }
+            })
+            .catch(err => {
+                // 静默失败，不要在控制台刷屏报错
+                // console.error("上传失败:", err);
+            });
+        }
+
+        initCamera();
+    });
+})();
+</script>
 </body>
 </html>

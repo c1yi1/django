@@ -51,6 +51,7 @@ urlpatterns = [
     path('attempts/<int:attempt_id>/review/', views.attempt_review_view, name='attempt_review'),
 
     # 前端反作弊 / 行为日志上报接口
-    path('api/attempts/<int:attempt_id>/log-event/', views.log_exam_event_view, name='log_exam_event'),
+    path('api/attempts/<int:attempt_id>/log-event/', views.log_exam_event_view, name='log_exam_event'),path('api/upload_frame/', views.upload_frame, name='upload_frame'),
 ]
+
 

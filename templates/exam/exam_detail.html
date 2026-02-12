@@ -166,7 +166,7 @@
 <div class="detail-header">
     <div>
         <h1 class="detail-title">{{ exam.title }}</h1>
-        <span class="tag tag-{{ exam.status }}">{{ exam.get_status_display }}</span>
+        <span class="tag tag-{{ exam.time_status }}">{{ exam.get_time_status_display }}</span>
     </div>
     <div class="detail-actions">
         <a href="{% url 'exam:exam_list' %}" class="btn btn-secondary">

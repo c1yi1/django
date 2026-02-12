@@ -13,7 +13,11 @@ from .models import Exam, Paper, PaperQuestion, ExamAttempt, Answer, Question, C
 from .utils import parse_excel_file, parse_csv_file, parse_json_file, import_questions_from_data
 import json
 from django.http import JsonResponse, HttpResponse
-
+import base64
+import numpy as np
+import cv2
+from django.views.decorators.csrf import csrf_exempt
+import os
 
 def log_wrong_question(user, question, source='exam'):
     """记录错题（客观题为主），重复错误叠加计数"""
@@ -379,6 +383,66 @@ def log_exam_event_view(request, attempt_id):
     return JsonResponse(response_data)
 
 
+@csrf_exempt
+def upload_frame(request):
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error', 'msg': 'Only POST allowed'})
+
+    try:
+        # 1. 解析数据
+        data = json.loads(request.body)
+        image_str = data.get('image')
+        # attempt_id = data.get('attempt_id') # 暂时不用，以后可以用来存日志
+
+        if not image_str:
+            return JsonResponse({'status': 'error', 'msg': 'No image'})
+
+        # 2. 解码图片
+        header, encoded = image_str.split(',', 1)
+        image_bytes = base64.b64decode(encoded)
+        nparr = np.frombuffer(image_bytes, np.uint8)
+        img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+
+        # ==================== 🕵️‍♂️ 核心反作弊逻辑 ====================
+
+        # A. 准备人脸检测器 (OpenCV 自带模型)
+        # 注意：第一次运行时，OpenCV 会自动查找这个 XML 文件
+        face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+
+        # B. 转为灰度图 (检测更快)
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+        # C. 检测人脸
+        # scaleFactor=1.1, minNeighbors=5 是标准参数
+        faces = face_cascade.detectMultiScale(gray, 1.1, 5)
+
+        face_count = len(faces)
+
+        # D. 判定逻辑
+        status = 'success'
+        msg = '正常'
+
+        if face_count == 0:
+            status = 'alert'
+            msg = '⚠️ 警告：未检测到考生人脸！请保持在摄像头范围内。'
+            print(f"❌ [监控] 异常：无人脸")
+
+        elif face_count > 1:
+            status = 'alert'
+            msg = '⚠️ 严重警告：检测到多人！请确保独立完成考试。'
+            print(f"❌ [监控] 异常：多人 ({face_count}人)")
+
+        else:
+            # face_count == 1
+            print(f"✅ [监控] 正常：检测到 1 人")
+
+        # ==========================================================
+
+        return JsonResponse({'status': status, 'msg': msg})
+
+    except Exception as e:
+        print(f"❌ 处理出错: {e}")
+        return JsonResponse({'status': 'error', 'msg': str(e)})
 @login_required
 @require_http_methods(["GET", "POST"])
 def take_exam_view(request, attempt_id):

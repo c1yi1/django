@@ -1,5 +1,5 @@
- {% extends 'base.html' %}
-
+{% extends 'base.html' %}
+{% load static %}
 {% block title %}控制台 - 智能学习系统{% endblock %}
 
 {% block header_nav %}
@@ -333,7 +333,7 @@
 {% if chart_labels and chart_scores and chart_labels != '[]' %}
 {{ chart_labels|json_script:"chart-labels" }}
 {{ chart_scores|json_script:"chart-scores" }}
-<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<script src="{% static 'js/echarts.min.js' %}"></script>
 <script>
 (function() {
     const labels = JSON.parse(document.getElementById('chart-labels').textContent || '[]');
@@ -349,7 +349,10 @@
     
     const initLineChart = function() {
         const dom = document.getElementById('line-chart');
-        if (!dom) return;
+        if (!dom || typeof echarts === 'undefined') {
+            console.warn('ECharts 未加载或找不到 line-chart 容器，无法初始化折线图');
+            return;
+        }
         const chart = echarts.init(dom);
         chart.setOption({
             backgroundColor: 'transparent',
@@ -398,7 +401,10 @@
 
     const initBarChart = function() {
         const dom = document.getElementById('bar-chart');
-        if (!dom) return;
+        if (!dom || typeof echarts === 'undefined') {
+            console.warn('ECharts 未加载或找不到 bar-chart 容器，无法初始化柱状图');
+            return;
+        }
         const chart = echarts.init(dom);
         chart.setOption({
             backgroundColor: 'transparent',

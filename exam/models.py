@@ -117,11 +117,36 @@ class Exam(models.Model):
     def __str__(self):
         return self.title
     
+    @property
+    def time_status(self):
+        """
+        根据当前时间动态计算考试状态：
+        - draft: 始终显示草稿
+        - 已发布（published）：当前时间早于开始时间
+        - 进行中（ongoing）：当前时间在开始和结束时间之间
+        - 已结束（finished）：当前时间晚于结束时间
+        """
+        now = timezone.now()
+        # 草稿状态单独处理
+        if self.status == 'draft':
+            return 'draft'
+        # 按时间窗口动态计算状态
+        if now < self.start_time:
+            return 'published'
+        if self.start_time <= now <= self.end_time:
+            return 'ongoing'
+        return 'finished'
+    
+    def get_time_status_display(self):
+        """获取基于时间计算后的状态中文显示"""
+        display_map = dict(self.STATUS_CHOICES)
+        return display_map.get(self.time_status, display_map.get(self.status, '未知状态'))
+    
     def is_available(self):
         """检查考试是否可用（可以开始答题）"""
         now = timezone.now()
         # 考试状态必须是已发布或进行中，且当前时间在开始时间和结束时间之间
-        return self.status in ['published', 'ongoing'] and self.start_time <= now <= self.end_time
+        return self.time_status in ['published', 'ongoing'] and self.start_time <= now <= self.end_time
 
 
 class Paper(models.Model):
