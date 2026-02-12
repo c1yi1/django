@@ -1,3 +1,4 @@
+HEAD
 # Django 在线考试系统开发日志
 
 ## 项目概述
@@ -595,3 +596,7 @@ python manage.py createsuperuser
 
 本项目仅供学习和研究使用。
 
+
+# django
+noob
+756fd8a2540c7f35dd5049677447c8a029d05041
